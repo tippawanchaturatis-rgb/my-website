@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบคัดกรองและประเมินภาวะพึ่งพิง (Barthel ADL Index) & LTC (Cloud Sync)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Sarabun & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for Dashboard Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Sarabun', 'Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        health: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Sarabun', 'Inter', sans-serif;
+            font-size: 1.1rem;
+        }
+        
+        /* Dedicated Print Styles */
+        @media print {
+            body * {
+                visibility: hidden !important;
+            }
+            #print-modal, #print-modal *, #printableArea, #printableArea * {
+                visibility: visible !important;
+            }
+            #print-modal {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                background: white !important;
+                display: block !important;
+                overflow: visible !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-container {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                background: white;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-900 min-h-screen flex flex-col pb-24 md:pb-0">
+
+    <!-- Header Navigation (Will be hidden on mobile during assessment for clutter-free view) -->
+    <header id="main-header" class="bg-gradient-to-r from-emerald-800 via-teal-800 to-cyan-900 text-white shadow-md sticky top-0 z-40 no-print transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 py-3.5 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white/15 p-2.5 rounded-2xl backdrop-blur-sm border border-white/20">
+                    <i class="fa-solid fa-notes-medical text-2xl text-emerald-300"></i>
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-xl font-extrabold tracking-wide">LTC & Barthel ADL (Cloud)</h1>
+                    <p class="text-xs text-emerald-200 hidden sm:block">ระบบประเมินภาวะพึ่งพิงออนไลน์ (เชื่อมโยงข้อมูลแบบเรียลไทม์)</p>
+                </div>
+            </div>
+            <!-- Desktop Nav Buttons -->
+            <div class="hidden lg:flex items-center space-x-2">
+                <button onclick="switchTab('dashboard')" id="btn-tab-dashboard" class="px-4 py-2 rounded-xl text-sm font-bold transition-all bg-white/25 text-white shadow-inner flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie"></i> ภาพรวม
+                </button>
+                <button onclick="switchTab('assessment')" id="btn-tab-assessment" class="px-4 py-2 rounded-xl text-sm font-bold transition-all hover:bg-white/10 text-emerald-100 flex items-center gap-2">
+                    <i class="fa-solid fa-file-circle-plus"></i> ประเมินใหม่
+                </button>
+                <button onclick="switchTab('records')" id="btn-tab-records" class="px-4 py-2 rounded-xl text-sm font-bold transition-all hover:bg-white/10 text-emerald-100 flex items-center gap-2">
+                    <i class="fa-solid fa-database"></i> ฐานข้อมูลพหุภาคี (<span id="record-count-badge">0</span>)
+                </button>
+                <button onclick="openMasterReportModal()" class="px-4 py-2 rounded-xl text-sm font-bold transition-all bg-teal-600 hover:bg-teal-700 text-white shadow flex items-center gap-2">
+                    <i class="fa-solid fa-print"></i> พิมพ์รายงาน
+                </button>
+                <button onclick="switchTab('guide')" id="btn-tab-guide" class="px-4 py-2 rounded-xl text-sm font-bold transition-all hover:bg-white/10 text-emerald-100 flex items-center gap-2">
+                    <i class="fa-solid fa-book-medical"></i> คู่มือ
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Bottom Navigation Bar (Hidden during active mobile assessment to maximize reading area) -->
+    <nav id="mobile-bottom-nav" class="lg:hidden fixed bottom-0 left-0 right-0 bg-slate-900 text-white z-40 border-t border-slate-800 px-2 py-2 flex justify-around items-center no-print shadow-2xl transition-all duration-300">
+        <button onclick="switchTab('dashboard')" id="mob-tab-dashboard" class="flex flex-col items-center text-emerald-400 py-1 px-3 rounded-xl transition">
+            <i class="fa-solid fa-chart-pie text-xl mb-0.5"></i>
+            <span class="text-[11px] font-bold">ภาพรวม</span>
+        </button>
+        <button onclick="switchTab('assessment')" id="mob-tab-assessment" class="flex flex-col items-center text-slate-400 py-1 px-3 rounded-xl transition">
+            <i class="fa-solid fa-file-circle-plus text-xl mb-0.5"></i>
+            <span class="text-[11px] font-bold">ประเมิน</span>
+        </button>
+        <button onclick="switchTab('records')" id="mob-tab-records" class="flex flex-col items-center text-slate-400 py-1 px-3 rounded-xl transition">
+            <i class="fa-solid fa-database text-xl mb-0.5"></i>
+            <span class="text-[11px] font-bold">ฐานข้อมูล</span>
+        </button>
+        <button onclick="openMasterReportModal()" class="flex flex-col items-center text-teal-400 py-1 px-3 rounded-xl transition">
+            <i class="fa-solid fa-print text-xl mb-0.5"></i>
+            <span class="text-[11px] font-bold">พิมพ์สรุป</span>
+        </button>
+        <button onclick="switchTab('guide')" id="mob-tab-guide" class="flex flex-col items-center text-slate-400 py-1 px-3 rounded-xl transition">
+            <i class="fa-solid fa-book-medical text-xl mb-0.5"></i>
+            <span class="text-[11px] font-bold">คู่มือ</span>
+        </button>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-3 sm:px-4 py-4 sm:py-6 no-print">
+
+        <!-- NOTIFICATION TOAST -->
+        <div id="toast" class="fixed top-5 right-5 z-50 transform -translate-y-20 opacity-0 transition-all duration-300 max-w-sm">
+            <div id="toast-content" class="flex items-center gap-3 p-4 rounded-2xl shadow-2xl border text-sm font-bold">
+                <i id="toast-icon" class="text-xl"></i>
+                <span id="toast-message"></span>
+            </div>
+        </div>
+
+        <!-- ================= TAB 1: DASHBOARD ================= -->
+        <section id="tab-dashboard" class="space-y-5">
+            <!-- Welcome Banner -->
+            <div class="bg-gradient-to-r from-emerald-700 to-teal-800 rounded-3xl p-5 sm:p-8 text-white shadow-xl flex flex-col md:flex-row justify-between items-center gap-5">
+                <div class="space-y-2 text-center md:text-left">
+                    <span class="bg-white/20 text-emerald-100 text-xs px-3.5 py-1 rounded-full uppercase tracking-wider font-bold">Cloud Synced Long Term Care</span>
+                    <h2 class="text-xl sm:text-3xl font-extrabold">ระบบประเมินดัชนีบาร์เธลเอดีแอล (Barthel ADL)</h2>
+                    <p class="text-emerald-100 text-sm sm:text-base max-w-2xl font-medium leading-relaxed">
+                        ข้อมูลซิงค์อัตโนมัติแบบเรียลไทม์ระหว่าง อสม. และเจ้าหน้าที่ทุกคนในพื้นที่ ดูรายงานภาพรวมได้ทันที
+                    </p>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                    <button onclick="switchTab('assessment')" class="bg-white text-emerald-900 hover:bg-emerald-50 px-5 py-3.5 rounded-2xl font-extrabold text-sm sm:text-base shadow-lg transition flex items-center justify-center gap-2.5 w-full sm:w-auto">
+                        <i class="fa-solid fa-plus-circle text-lg text-emerald-600"></i> เริ่มต้นทำแบบประเมิน
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Overview Cards -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+                <div class="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs sm:text-sm font-bold text-slate-500 uppercase">ทั้งหมด</p>
+                        <h3 id="stat-total" class="text-2xl sm:text-4xl font-extrabold text-slate-900 mt-1">0</h3>
+                    </div>
+                    <div class="w-12 h-12 sm:w-16 sm:h-16 bg-emerald-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-emerald-700 text-xl sm:text-2xl font-bold">
+                        <i class="fa-solid fa-clipboard-user"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs sm:text-sm font-bold text-emerald-700 uppercase">ติดสังคม</p>
+                        <h3 id="stat-group1" class="text-2xl sm:text-4xl font-extrabold text-emerald-800 mt-1">0</h3>
+                    </div>
+                    <div class="w-12 h-12 sm:w-16 sm:h-16 bg-emerald-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-emerald-700 text-xl sm:text-2xl font-bold">
+                        <i class="fa-solid fa-person-walking"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs sm:text-sm font-bold text-amber-700 uppercase">ติดบ้าน</p>
+                        <h3 id="stat-group2" class="text-2xl sm:text-4xl font-extrabold text-amber-800 mt-1">0</h3>
+                    </div>
+                    <div class="w-12 h-12 sm:w-16 sm:h-16 bg-amber-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-amber-700 text-xl sm:text-2xl font-bold">
+                        <i class="fa-solid fa-house-chimney"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs sm:text-sm font-bold text-rose-700 uppercase">ติดเตียง</p>
+                        <h3 id="stat-group3" class="text-2xl sm:text-4xl font-extrabold text-rose-800 mt-1">0</h3>
+                    </div>
+                    <div class="w-12 h-12 sm:w-16 sm:h-16 bg-rose-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-rose-700 text-xl sm:text-2xl font-bold">
+                        <i class="fa-solid fa-bed"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics & Recent Records Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                <!-- Chart Section -->
+                <div class="bg-white p-5 sm:p-6 rounded-3xl shadow-sm border border-slate-200 lg:col-span-1 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-teal-700"></i> สัดส่วนกลุ่มผู้ป่วย LTC
+                        </h3>
+                        <div class="relative w-full h-52 flex justify-center items-center mt-3">
+                            <canvas id="ltcPieChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex justify-around text-center text-xs sm:text-sm font-bold">
+                        <div><span class="inline-block w-3 h-3 rounded-full bg-emerald-500 mr-1"></span> ติดสังคม</div>
+                        <div><span class="inline-block w-3 h-3 rounded-full bg-amber-500 mr-1"></span> ติดบ้าน</div>
+                        <div><span class="inline-block w-3 h-3 rounded-full bg-rose-500 mr-1"></span> ติดเตียง</div>
+                    </div>
+                </div>
+
+                <!-- Recent Records Mobile Card List & Desktop Table -->
+                <div class="bg-white p-5 sm:p-6 rounded-3xl shadow-sm border border-slate-200 lg:col-span-2 flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                                <i class="fa-solid fa-clock-rotate-left text-teal-700"></i> รายการประเมินล่าสุด (จากฐานข้อมูลกลาง)
+                            </h3>
+                            <button onclick="switchTab('records')" class="text-xs sm:text-sm text-teal-700 hover:text-teal-900 font-bold flex items-center gap-1">
+                                ดูทั้งหมด <i class="fa-solid fa-arrow-right"></i>
+                            </button>
+                        </div>
+                        <div id="recent-records-container" class="space-y-3">
+                            <!-- Populated by JS for mobile cards & desktop -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 2: ASSESSMENT FORM ================= -->
+        <section id="tab-assessment" class="hidden space-y-4">
+            
+            <!-- Mobile Compact Header Bar (Replaces hidden main header during assessment) -->
+            <div class="bg-slate-900 text-white p-3.5 rounded-2xl flex justify-between items-center shadow-md lg:hidden">
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="switchTab('dashboard')" class="bg-slate-800 text-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1">
+                        <i class="fa-solid fa-arrow-left"></i> กลับหน้าหลัก
+                    </button>
+                    <span class="text-xs font-bold text-teal-400">แบบประเมิน ADL</span>
+                </div>
+                <div class="bg-emerald-600 text-white px-3 py-1 rounded-xl text-xs font-extrabold shadow">
+                    รวม: <span id="mobile-top-total">0</span>/20 คะแนน
+                </div>
+            </div>
+
+            <div class="bg-white p-4 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-5 border-b border-slate-200 gap-3">
+                    <div>
+                        <span class="bg-emerald-100 text-emerald-900 text-xs px-3 py-1 rounded-full font-extrabold">แบบประเมินทางการแพทย์ (Cloud Sync)</span>
+                        <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">แบบประเมินบาร์เธลเอดีแอล (Barthel ADL Index)</h2>
+                    </div>
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <button type="button" onclick="loadSampleData()" class="flex-1 sm:flex-none bg-amber-100 hover:bg-amber-200 text-amber-900 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-wand-magic-sparkles text-amber-700"></i> ตัวอย่าง
+                        </button>
+                        <button type="button" onclick="resetForm()" class="flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-rotate-right"></i> ล้างค่า
+                        </button>
+                    </div>
+                </div>
+
+                <form id="adl-form" onsubmit="saveAssessment(event)" class="mt-6 space-y-6">
+                    <input type="hidden" id="edit-id" value="">
+
+                    <!-- PART 1: Staff Information -->
+                    <div class="bg-emerald-50/70 p-4 sm:p-5 rounded-2xl border border-emerald-200 space-y-4">
+                        <h3 class="text-sm sm:text-base font-extrabold text-emerald-900 flex items-center gap-2 uppercase">
+                            <i class="fa-solid fa-user-shield text-emerald-700"></i> 1. ข้อมูลผู้กรอกข้อมูล
+                        </h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs sm:text-sm font-bold text-slate-800 mb-1.5">ชื่อ *</label>
+                                <input type="text" id="staff-name" required class="w-full px-4 py-3 text-base rounded-xl border-2 border-slate-300 focus:border-emerald-600 focus:outline-none bg-white font-medium" placeholder="เช่น นส.ดารารัตน์ พยาบาล">
+                            </div>
+                            <div>
+                                <label class="block text-xs sm:text-sm font-bold text-slate-800 mb-1.5">พื้นที่รับผิดชอบ *</label>
+                                <input type="text" id="staff-area" required class="w-full px-4 py-3 text-base rounded-xl border-2 border-slate-300 focus:border-emerald-600 focus:outline-none bg-white font-medium" placeholder="เช่น รพ.สต.บ้านหนองผักชี">
+                            </div>
+                            <div>
+                                <label class="block text-xs sm:text-sm font-bold text-slate-800 mb-1.5">วันที่ลงข้อมูล *</label>
+                                <input type="date" id="assessment-date" required class="w-full px-4 py-3 text-base rounded-xl border-2 border-slate-300 focus:border-emerald-600 focus:outline-none bg-white font-medium">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PART 2: Patient Information -->
+                    <div class="bg-teal-50/70 p-4 sm:p-5 rounded-2xl border border-teal-200 space-y-4">
+                        <h3 class="text-sm sm:text-base font-extrabold text-teal-900 flex items-center gap-2 uppercase">
+                            <i class="fa-solid fa-hospital-user text-teal-700"></i> 2. ข้อมูลผู้ป่วย / ผู้สูงอายุ
+                        </h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs sm:text-sm font-bold text-slate-800 mb-1.5">ชื่อ-นามสกุล *</label>
+                                <input type="text" id="patient-name" required class="w-full px-4 py-3 text-base rounded-xl border-2 border-slate-300 focus:border-teal-600 focus:outline-none bg-white font-medium" placeholder="เช่น นายสมชาย ใจดี">
+                            </div>
+                            <div>
+                                <label class="block text-xs sm:text-sm font-bold text-slate-800 mb-1.5">เลขประจำตัวประชาชน (13 หลัก) *</label>
+                                <input type="text" id="patient-cid" maxlength="13" required class="w-full px-4 py-3 text-base rounded-xl border-2 border-slate-300 focus:border-teal-600 focus:outline-none bg-white font-medium" placeholder="เช่น 1609900123456">
+                            </div>
+                            <div>
+                                <label class="block text-xs sm:text-sm font-bold text-slate-800 mb-1.5">เบอร์โทรศัพท์ *</label>
+                                <input type="text" id="patient-phone" required class="w-full px-4 py-3 text-base rounded-xl border-2 border-slate-300 focus:border-teal-600 focus:outline-none bg-white font-medium" placeholder="เช่น 0812345678">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PART 3: Barthel ADL Index 10 Items -->
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center bg-cyan-900 text-white p-4 sm:p-5 rounded-2xl shadow-sm sticky top-2 lg:top-16 z-30">
+                            <div>
+                                <h3 class="text-sm sm:text-base font-extrabold uppercase flex items-center gap-2">
+                                    <i class="fa-solid fa-list-check text-cyan-300"></i> 3. แบบประเมิน ADL 10 ข้อ
+                                </h3>
+                                <p class="text-[11px] sm:text-xs text-cyan-100 font-medium">คะแนนอยู่ในวงเล็บด้านหลัง</p>
+                            </div>
+                            <div class="bg-white/15 px-3.5 py-2 rounded-xl text-right border border-white/20">
+                                <span class="text-[10px] text-cyan-200 block font-bold">คะแนนรวม</span>
+                                <span id="live-total-score" class="text-xl sm:text-2xl font-extrabold text-white">0</span> <span class="text-xs font-bold text-cyan-200">/ 20</span>
+                            </div>
+                        </div>
+
+                        <!-- ADL Items Container (Touch optimized cards) -->
+                        <div class="space-y-4" id="adl-items-container">
+
+                            <!-- Item 1: Feeding -->
+                            <div class="bg-white p-4 sm:p-5 rounded-2xl border-2 border-slate-200 space-y-3">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="font-extrabold text-slate-900 text-sm sm:text-base flex items-center gap-2.5">
+                                        <span class="w-7 h-7 rounded-full bg-teal-100 text-teal-900 flex items-center justify-center text-xs font-extrabold">1</span>
+                                        การรับประทานอาหาร (Feeding)
+                                    </h4>
+                                    <span class="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200 score-badge" id="score-val-1">0 คะแนน</span>
+                                </div>
+                                <div class="grid grid-cols-1 gap-2 pt-1">
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_1" value="0" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600" required>
+                                        <div>ตักอาหารเข้าปากเองไม่ได้ ต้องมีคนป้อนให้ (0 คะแนน)</div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_1" value="5" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600">
+                                        <div>ตักกินเองได้ แต่ต้องมีคนช่วยตัดชิ้นเล็กๆ หรือช่วยตัก (5 คะแนน)</div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_1" value="10" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600">
+                                        <div>กินอาหารเองได้ปกติด้วยตนเอง (10 คะแนน)</div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Item 2: Grooming -->
+                            <div class="bg-white p-4 sm:p-5 rounded-2xl border-2 border-slate-200 space-y-3">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="font-extrabold text-slate-900 text-sm sm:text-base flex items-center gap-2.5">
+                                        <span class="w-7 h-7 rounded-full bg-teal-100 text-teal-900 flex items-center justify-center text-xs font-extrabold">2</span>
+                                        การล้างหน้า หวีผม แปรงฟัน โกนหนวด (Grooming)
+                                    </h4>
+                                    <span class="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200 score-badge" id="score-val-2">0 คะแนน</span>
+                                </div>
+                                <div class="grid grid-cols-1 gap-2 pt-1">
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_2" value="0" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600" required>
+                                        <div>ต้องมีคนทำให้หรือช่วยเหลือ (0 คะแนน)</div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_2" value="5" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600">
+                                        <div>ทำความสะอาดหน้าผมฟันได้เองทั้งหมด (5 คะแนน)</div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Item 3: Toilet use -->
+                            <div class="bg-white p-4 sm:p-5 rounded-2xl border-2 border-slate-200 space-y-3">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="font-extrabold text-slate-900 text-sm sm:text-base flex items-center gap-2.5">
+                                        <span class="w-7 h-7 rounded-full bg-teal-100 text-teal-900 flex items-center justify-center text-xs font-extrabold">3</span>
+                                        การใช้ห้องน้ำ (Toilet use)
+                                    </h4>
+                                    <span class="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200 score-badge" id="score-val-3">0 คะแนน</span>
+                                </div>
+                                <div class="grid grid-cols-1 gap-2 pt-1">
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_3" value="0" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600" required>
+                                        <div>ช่วยตัวเองไม่ได้เลย ต้องมีคนพาไปและทำความสะอาดให้ (0 คะแนน)</div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_3" value="5" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600">
+                                        <div>ช่วยตัวเองได้บ้าง แต่ยังต้องการคนช่วยพยุงหรือเช็ดทำความสะอาด (5 คะแนน)</div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_3" value="10" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600">
+                                        <div>ไปห้องน้ำและทำความสะอาดได้เองปลอดภัย (10 คะแนน)</div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Item 4: Bathing -->
+                            <div class="bg-white p-4 sm:p-5 rounded-2xl border-2 border-slate-200 space-y-3">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="font-extrabold text-slate-900 text-sm sm:text-base flex items-center gap-2.5">
+                                        <span class="w-7 h-7 rounded-full bg-teal-100 text-teal-900 flex items-center justify-center text-xs font-extrabold">4</span>
+                                        การอาบน้ำ (Bathing)
+                                    </h4>
+                                    <span class="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200 score-badge" id="score-val-4">0 คะแนน</span>
+                                </div>
+                                <div class="grid grid-cols-1 gap-2 pt-1">
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_4" value="0" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600" required>
+                                        <div>ต้องมีคนช่วยอาบน้ำหรือทำให้ทั้งหมด (0 คะแนน)</div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_4" value="5" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600">
+                                        <div>อาบน้ำเองได้ หรือทำความสะอาดร่างกายได้เอง (5 คะแนน)</div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Item 5: Transfer -->
+                            <div class="bg-white p-4 sm:p-5 rounded-2xl border-2 border-slate-200 space-y-3">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="font-extrabold text-slate-900 text-sm sm:text-base flex items-center gap-2.5">
+                                        <span class="w-7 h-7 rounded-full bg-teal-100 text-teal-900 flex items-center justify-center text-xs font-extrabold">5</span>
+                                        การเคลื่อนย้ายตัวจากเตียงไปเก้าอี้ (Transfer)
+                                    </h4>
+                                    <span class="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200 score-badge" id="score-val-5">0 คะแนน</span>
+                                </div>
+                                <div class="grid grid-cols-1 gap-2 pt-1">
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_5" value="0" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600" required>
+                                        <div>ลุกนั่งไม่ได้เลย ต้องใช้คน 2 คนอุ้ม (0 คะแนน)</div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_5" value="5" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600">
+                                        <div>ต้องการคนช่วยมาก มีคนช่วย 1 คนพยุง (5 คะแนน)</div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_5" value="10" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600">
+                                        <div>ต้องการความช่วยเหลือเล็กน้อย (10 คะแนน)</div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_5" value="15" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600">
+                                        <div>ลุกนั่งย้ายตัวได้เองปลอดภัยไม่ต้องมีคนช่วย (15 คะแนน)</div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Item 6: Mobility -->
+                            <div class="bg-white p-4 sm:p-5 rounded-2xl border-2 border-slate-200 space-y-3">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="font-extrabold text-slate-900 text-sm sm:text-base flex items-center gap-2.5">
+                                        <span class="w-7 h-7 rounded-full bg-teal-100 text-teal-900 flex items-center justify-center text-xs font-extrabold">6</span>
+                                        การเดินภายในห้องหรือบ้าน (Mobility)
+                                    </h4>
+                                    <span class="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200 score-badge" id="score-val-6">0 คะแนน</span>
+                                </div>
+                                <div class="grid grid-cols-1 gap-2 pt-1">
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_6" value="0" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600" required>
+                                        <div>เดินไม่ได้ หรือนั่งรถเข็นตลอดเวลา (0 คะแนน)</div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_6" value="5" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600">
+                                        <div>ใช้วีลแชร์ขับเคลื่อนได้เอง หรือเดินระยะสั้นมีคนพยุง (5 คะแนน)</div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_6" value="10" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600">
+                                        <div>เดินได้โดยมีคนพยุง หรือใช้ไม้เท้า/Walker (10 คะแนน)</div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_6" value="15" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600">
+                                        <div>เดินได้เองในบ้านคล่องแคล่วปลอดภัย (15 คะแนน)</div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Item 7: Stairs -->
+                            <div class="bg-white p-4 sm:p-5 rounded-2xl border-2 border-slate-200 space-y-3">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="font-extrabold text-slate-900 text-sm sm:text-base flex items-center gap-2.5">
+                                        <span class="w-7 h-7 rounded-full bg-teal-100 text-teal-900 flex items-center justify-center text-xs font-extrabold">7</span>
+                                        การขึ้นลงบันได (Stairs)
+                                    </h4>
+                                    <span class="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200 score-badge" id="score-val-7">0 คะแนน</span>
+                                </div>
+                                <div class="grid grid-cols-1 gap-2 pt-1">
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_7" value="0" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600" required>
+                                        <div>ไม่สามารถขึ้นลงบันไดได้เลย (0 คะแนน)</div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_7" value="5" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600">
+                                        <div>ต้องการคนช่วยประคองหรือดูแลความปลอดภัย (5 คะแนน)</div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_7" value="10" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600">
+                                        <div>ขึ้นลงบันไดได้เองอิสระปลอดภัย (10 คะแนน)</div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Item 8: Dressing -->
+                            <div class="bg-white p-4 sm:p-5 rounded-2xl border-2 border-slate-200 space-y-3">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="font-extrabold text-slate-900 text-sm sm:text-base flex items-center gap-2.5">
+                                        <span class="w-7 h-7 rounded-full bg-teal-100 text-teal-900 flex items-center justify-center text-xs font-extrabold">8</span>
+                                        การใส่เสื้อผ้า (Dressing)
+                                    </h4>
+                                    <span class="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200 score-badge" id="score-val-8">0 คะแนน</span>
+                                </div>
+                                <div class="grid grid-cols-1 gap-2 pt-1">
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_8" value="0" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600" required>
+                                        <div>ต้องมีคนสวมใส่ให้ ทำเองไม่ได้ (0 คะแนน)</div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_8" value="5" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600">
+                                        <div>ช่วยตัวเองได้ครึ่งหนึ่ง เช่น ใส่ได้แต่ติดกระดุมไม่ได้ (5 คะแนน)</div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_8" value="10" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600">
+                                        <div>ใส่เสื้อผ้าเองได้เรียบร้อยปกติ (10 คะแนน)</div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Item 9: Bowels -->
+                            <div class="bg-white p-4 sm:p-5 rounded-2xl border-2 border-slate-200 space-y-3">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="font-extrabold text-slate-900 text-sm sm:text-base flex items-center gap-2.5">
+                                        <span class="w-7 h-7 rounded-full bg-teal-100 text-teal-900 flex items-center justify-center text-xs font-extrabold">9</span>
+                                        การกลั้นการขับถ่ายอุจจาระ (Bowels)
+                                    </h4>
+                                    <span class="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200 score-badge" id="score-val-9">0 คะแนน</span>
+                                </div>
+                                <div class="grid grid-cols-1 gap-2 pt-1">
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_9" value="0" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600" required>
+                                        <div>กลั้นไม่ได้ หรือต้องสวนอุจจาระเสมอ (0 คะแนน)</div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_9" value="5" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600">
+                                        <div>กลั้นไม่ได้บางครั้ง (สัปดาห์ละ 1 ครั้ง) (5 คะแนน)</div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_9" value="10" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600">
+                                        <div>กลั้นอุจจาระได้ปกติ ไม่มีเล็ด (10 คะแนน)</div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Item 10: Bladder -->
+                            <div class="bg-white p-4 sm:p-5 rounded-2xl border-2 border-slate-200 space-y-3">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="font-extrabold text-slate-900 text-sm sm:text-base flex items-center gap-2.5">
+                                        <span class="w-7 h-7 rounded-full bg-teal-100 text-teal-900 flex items-center justify-center text-xs font-extrabold">10</span>
+                                        การกลั้นการขับถ่ายปัสสาวะ (Bladder)
+                                    </h4>
+                                    <span class="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200 score-badge" id="score-val-10">0 คะแนน</span>
+                                </div>
+                                <div class="grid grid-cols-1 gap-2 pt-1">
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_10" value="0" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600" required>
+                                        <div>กลั้นไม่ได้ หรือใส่สายสวนปัสสาวะคาไว้ (0 คะแนน)</div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_10" value="5" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600">
+                                        <div>กลั้นไม่ได้บางครั้ง เป็นบางวัน (5 คะแนน)</div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:bg-emerald-50 cursor-pointer text-xs sm:text-sm font-medium">
+                                        <input type="radio" name="adl_10" value="10" onchange="calculateADL()" class="mt-0.5 w-5 h-5 text-emerald-600">
+                                        <div>กลั้นปัสสาวะได้ปกติ ควบคุมได้ดี (10 คะแนน)</div>
+                                    </label>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Live Summary Result Box -->
+                    <div id="evaluation-preview-box" class="bg-gradient-to-br from-slate-900 to-teal-950 text-white p-5 sm:p-6 rounded-2xl shadow-xl space-y-3">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-white/15">
+                            <div>
+                                <span class="text-[10px] sm:text-xs font-bold text-teal-400 uppercase">การประเมินอัตโนมัติ LTC</span>
+                                <h3 id="preview-group-title" class="text-base sm:text-xl font-extrabold mt-0.5 text-emerald-400">กรุณาทำแบบประเมินให้ครบถ้วน</h3>
+                            </div>
+                            <div class="bg-white/15 px-4 py-2 rounded-xl text-right border border-white/20">
+                                <span class="text-[10px] text-slate-200 block font-bold">คะแนนรวม</span>
+                                <span id="preview-total-score" class="text-2xl sm:text-3xl font-extrabold text-white">0</span> <span class="text-xs text-slate-200 font-bold">/ 20</span>
+                            </div>
+                        </div>
+                        <div id="preview-group-desc" class="text-xs sm:text-sm text-slate-200 leading-relaxed font-medium">
+                            ระบบคำนวณกลุ่ม LTC และแนะนำแนวทางดูแลตาม สปสช. ทันที
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="flex gap-3 pt-4 border-t border-slate-200">
+                        <button type="button" onclick="switchTab('dashboard')" class="flex-1 py-3.5 rounded-2xl border-2 border-slate-300 text-slate-700 hover:bg-slate-100 text-sm font-bold transition">
+                            ยกเลิก
+                        </button>
+                        <button type="submit" class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white py-3.5 rounded-2xl text-sm sm:text-base font-extrabold shadow-xl transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> บันทึกข้อมูลเข้าคลาวด์
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- ================= TAB 3: RECORDS & DATABASE ================= -->
+        <section id="tab-records" class="hidden space-y-5">
+            <div class="bg-white p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-200 space-y-5">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                        <h2 class="text-lg sm:text-2xl font-extrabold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-database text-teal-700"></i> ฐานข้อมูลกลาง Long Term Care (Cloud Database)
+                        </h2>
+                        <p class="text-xs sm:text-sm text-slate-600">ข้อมูลเชื่อมโยงถึงกันทุกเครื่องแบบเรียลไทม์</p>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+                        <button onclick="openMasterReportModal()" class="flex-1 sm:flex-none bg-teal-600 hover:bg-teal-700 text-white px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition flex items-center justify-center gap-1.5 shadow">
+                            <i class="fa-solid fa-print"></i> พิมพ์สรุปรายชื่อ
+                        </button>
+                        <button onclick="exportDataJSON()" class="bg-slate-100 hover:bg-slate-200 text-slate-800 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-arrow-down"></i> สำรอง JSON
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Search & Filters Bar -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </span>
+                        <input type="text" id="search-input" oninput="renderRecordsTable()" class="w-full pl-10 pr-3.5 py-3 text-sm rounded-xl border-2 border-slate-300 focus:border-emerald-600 focus:outline-none bg-white font-medium" placeholder="ค้นหาชื่อผู้ป่วย หรือเลขบัตร...">
+                    </div>
+                    <div>
+                        <select id="filter-group" onchange="renderRecordsTable()" class="w-full px-3.5 py-3 text-sm rounded-xl border-2 border-slate-300 focus:border-emerald-600 focus:outline-none bg-white font-medium">
+                            <option value="">-- กรองทุกกลุ่ม LTC --</option>
+                            <option value="กลุ่มติดสังคม">กลุ่มติดสังคม (ADL 12-20)</option>
+                            <option value="กลุ่มติดบ้าน">กลุ่มติดบ้าน (ADL 5-11)</option>
+                            <option value="กลุ่มติดเตียง">กลุ่มติดเตียง (ADL 0-4)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <select id="filter-sort" onchange="renderRecordsTable()" class="w-full px-3.5 py-3 text-sm rounded-xl border-2 border-slate-300 focus:border-emerald-600 focus:outline-none bg-white font-medium">
+                            <option value="desc">เรียงจาก วันที่ล่าสุด -> เก่าสุด</option>
+                            <option value="asc">เรียงจาก วันที่เก่าสุด -> ล่าสุด</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Records List Container -->
+                <div id="records-container" class="space-y-3">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 4: USER GUIDE & MANUAL ================= -->
+        <section id="tab-guide" class="hidden space-y-5">
+            <div class="bg-white p-5 sm:p-8 rounded-3xl shadow-sm border border-slate-200 space-y-6">
+                <div class="border-b border-slate-200 pb-4">
+                    <span class="bg-teal-100 text-teal-900 text-xs px-3 py-1 rounded-full font-extrabold">คู่มือปฏิบัติงานระบบคลาวด์</span>
+                    <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">คู่มือการใช้งานระบบคัดกรอง Barthel ADL & เกณฑ์ LTC แบบแชร์ข้อมูล</h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-emerald-50/70 border-2 border-emerald-300 rounded-2xl p-5 space-y-3">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-extrabold text-lg">1</div>
+                        <h3 class="font-extrabold text-emerald-950 text-base">กลุ่มติดสังคม</h3>
+                        <p class="text-xs font-bold text-emerald-800">ADL: 12 – 20 คะแนน</p>
+                        <p class="text-xs text-slate-700 leading-relaxed font-medium">พึ่งตนเองได้ดี ออกนอกบ้านร่วมกิจกรรมชุมชนได้ ส่งเสริมสุขภาพ ออกกำลังกายสม่ำเสมอ</p>
+                    </div>
+
+                    <div class="bg-amber-50/70 border-2 border-amber-300 rounded-2xl p-5 space-y-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center font-extrabold text-lg">2</div>
+                        <h3 class="font-extrabold text-amber-950 text-base">กลุ่มติดบ้าน</h3>
+                        <p class="text-xs font-bold text-amber-800">ADL: 5 – 11 คะแนน</p>
+                        <p class="text-xs text-slate-700 leading-relaxed font-medium">ช่วยเหลือตนเองได้บ้าง ชีวิตจำกัดในบ้าน ป้องกันการหกล้ม ปรับสภาพแวดล้อม กายภาพบำบัด</p>
+                    </div>
+
+                    <div class="bg-rose-50/70 border-2 border-rose-300 rounded-2xl p-5 space-y-3">
+                        <div class="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center font-extrabold text-lg">3</div>
+                        <h3 class="font-extrabold text-rose-950 text-base">กลุ่มติดเตียง</h3>
+                        <p class="text-xs font-bold text-rose-800">ADL: 0 – 4 คะแนน</p>
+                        <p class="text-xs text-slate-700 leading-relaxed font-medium">ภาวะพึ่งพิงรุนแรง ป้องกันแผลกดทับ (พลิกตัวทุก 2 ชม.) ระวังสำลัก เยี่ยมบ้านโดย CM/CG</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 mt-8 text-center text-xs font-bold text-slate-500 no-print">
+        <p>ระบบประเมินภาวะพึ่งพิง Barthel ADL & Long Term Care (Cloud Synchronized) • Optimized for Smartphone & Tablet</p>
+    </footer>
+
+    <!-- ================= PRINT MODAL ================= -->
+    <div id="print-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-3 overflow-y-auto">
+        <div class="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+            <div class="bg-slate-900 text-white px-5 py-3.5 flex justify-between items-center no-print">
+                <h3 class="font-bold text-sm sm:text-base flex items-center gap-2">
+                    <i class="fa-solid fa-file-lines text-teal-400"></i> พิมพ์รายงานทางการแพทย์
+                </h3>
+                <div class="flex items-center gap-2">
+                    <button onclick="triggerPrintAction()" class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition flex items-center gap-1.5 shadow">
+                        <i class="fa-solid fa-print"></i> พิมพ์ / PDF
+                    </button>
+                    <button onclick="closePrintModal()" class="bg-slate-800 hover:bg-slate-700 text-white p-2 rounded-xl transition">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="p-4 sm:p-8 overflow-y-auto flex-grow bg-slate-50 print-container" id="printableArea">
+                <!-- Printable Content Injected dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK & Cloud Sync Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Firebase Configuration & Environment Variables
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ltc-adl-shared-app';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "AIzaSyDummyKeyForLocalTestingOrFallback",
+            authDomain: "dummy-project.firebaseapp.com",
+            projectId: "dummy-project",
+            storageBucket: "dummy-project.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef"
+        };
+
+        let app, db, auth;
+        let records = [];
+        let pieChartInstance = null;
+        let currentUser = null;
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            const today = new Date().toISOString().split('T')[0];
+            const dateInput = document.getElementById('assessment-date');
+            if(dateInput && !dateInput.value) {
+                dateInput.value = today;
+            }
+
+            initPieChart();
+
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Authentication
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                currentUser = auth.currentUser;
+
+                // Real-time Firestore sync
+                const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'assessments');
+                onSnapshot(colRef, (snapshot) => {
+                    records = [];
+                    snapshot.forEach(docSnap => {
+                        records.push({ id: docSnap.id, ...docSnap.data() });
+                    });
+                    updateDashboard();
+                    renderRecordsTable();
+                }, (error) => {
+                    console.error("Firestore sync error:", error);
+                    // Fallback to localStorage if offline or permission error
+                    loadFromLocalStorage();
+                });
+
+            } catch (err) {
+                console.warn("Firebase initialization skipped or failed, using LocalStorage fallback.", err);
+                loadFromLocalStorage();
+            }
+        });
+
+        function loadFromLocalStorage() {
+            records = JSON.parse(localStorage.getItem('ltc_adl_records_cloud_fallback') || '[]');
+            updateDashboard();
+            renderRecordsTable();
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('ltc_adl_records_cloud_fallback', JSON.stringify(records));
+        }
+
+        // Expose functions globally for HTML event handlers
+        window.switchTab = function(tabId) {
+            const tabs = ['dashboard', 'assessment', 'records', 'guide'];
+            tabs.forEach(t => {
+                const el = document.getElementById(`tab-${t}`);
+                const deskBtn = document.getElementById(`btn-tab-${t}`);
+                const mobBtn = document.getElementById(`mob-tab-${t}`);
+                
+                if (t === tabId) {
+                    el.classList.remove('hidden');
+                    if(deskBtn) deskBtn.className = "px-4 py-2 rounded-xl text-sm font-bold transition-all bg-white/25 text-white shadow-inner flex items-center gap-2";
+                    if(mobBtn) mobBtn.className = "flex flex-col items-center text-emerald-400 py-1 px-3 rounded-xl transition";
+                    if (t === 'dashboard') updateDashboard();
+                    if (t === 'records') renderRecordsTable();
+                } else {
+                    el.classList.add('hidden');
+                    if(deskBtn) deskBtn.className = "px-4 py-2 rounded-xl text-sm font-bold transition-all hover:bg-white/10 text-emerald-100 flex items-center gap-2";
+                    if(mobBtn) mobBtn.className = "flex flex-col items-center text-slate-400 py-1 px-3 rounded-xl transition";
+                }
+            });
+
+            const mainHeader = document.getElementById('main-header');
+            const mobileBottomNav = document.getElementById('mobile-bottom-nav');
+            if(tabId === 'assessment') {
+                if(mainHeader) mainHeader.classList.add('hidden');
+                if(mobileBottomNav) mobileBottomNav.classList.add('hidden');
+            } else {
+                if(mainHeader) mainHeader.classList.remove('hidden');
+                if(mobileBottomNav) mobileBottomNav.classList.remove('hidden');
+            }
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        window.showToast = function(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const content = document.getElementById('toast-content');
+            const icon = document.getElementById('toast-icon');
+            const msg = document.getElementById('toast-message');
+
+            msg.textContent = message;
+            if (type === 'success') {
+                content.className = "flex items-center gap-3 p-4 rounded-2xl shadow-2xl border text-xs sm:text-sm font-bold bg-emerald-50 border-emerald-200 text-emerald-900";
+                icon.className = "fa-solid fa-circle-check text-emerald-700 text-xl";
+            } else {
+                content.className = "flex items-center gap-3 p-4 rounded-2xl shadow-2xl border text-xs sm:text-sm font-bold bg-rose-50 border-rose-200 text-rose-900";
+                icon.className = "fa-solid fa-circle-exclamation text-rose-700 text-xl";
+            }
+
+            toast.classList.remove('-translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('-translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        window.calculateADL = function() {
+            let total = 0;
+            for(let i=1; i<=10; i++) {
+                const radios = document.getElementsByName(`adl_${i}`);
+                let val = 0;
+                for(let r of radios) {
+                    if(r.checked) {
+                        val = parseInt(r.value);
+                        break;
+                    }
+                }
+                document.getElementById(`score-val-${i}`).textContent = `${val} คะแนน`;
+                total += val;
+            }
+
+            document.getElementById('live-total-score').textContent = total;
+            document.getElementById('preview-total-score').textContent = total;
+            const mobileTopTotal = document.getElementById('mobile-top-total');
+            if(mobileTopTotal) mobileTopTotal.textContent = total;
+
+            const titleEl = document.getElementById('preview-group-title');
+            const descEl = document.getElementById('preview-group-desc');
+            const boxEl = document.getElementById('evaluation-preview-box');
+
+            if(total >= 12 && total <= 20) {
+                titleEl.textContent = "กลุ่มติดสังคม (Social-bound)";
+                descEl.textContent = "พึ่งตนเองได้ดี ออกเดินทางร่วมกิจกรรมในชุมชนได้ ส่งเสริมสุขภาพ ออกกำลังกายสม่ำเสมอ";
+                boxEl.className = "bg-gradient-to-br from-slate-900 to-emerald-950 text-white p-5 sm:p-6 rounded-2xl shadow-xl space-y-3 border-2 border-emerald-500/40";
+            } else if(total >= 5 && total <= 11) {
+                titleEl.textContent = "กลุ่มติดบ้าน (Home-bound)";
+                descEl.textContent = "ช่วยเหลือตนเองได้บ้าง ชีวิตจำกัดในบ้าน ป้องกันการหกล้ม ปรับสภาพแวดล้อม และทำกายภาพบำบัด";
+                boxEl.className = "bg-gradient-to-br from-slate-900 to-amber-950 text-white p-5 sm:p-6 rounded-2xl shadow-xl space-y-3 border-2 border-amber-500/40";
+            } else {
+                titleEl.textContent = "กลุ่มติดเตียง (Bed-bound)";
+                descEl.textContent = "ภาวะพึ่งพิงรุนแรง ป้องกันแผลกดทับ (พลิกตัวทุก 2 ชม.) ระวังสำลักอาหาร และเยี่ยมบ้านโดย CM/CG";
+                boxEl.className = "bg-gradient-to-br from-slate-900 to-rose-950 text-white p-5 sm:p-6 rounded-2xl shadow-xl space-y-3 border-2 border-rose-500/40";
+            }
+        }
+
+        function getLTCGroup(score) {
+            if(score >= 12) return { name: 'กลุ่มติดสังคม', badge: 'bg-emerald-100 text-emerald-900 border-emerald-300' };
+            if(score >= 5) return { name: 'กลุ่มติดบ้าน', badge: 'bg-amber-100 text-amber-900 border-amber-300' };
+            return { name: 'กลุ่มติดเตียง', badge: 'bg-rose-100 text-rose-900 border-rose-300' };
+        }
+
+        window.saveAssessment = async function(e) {
+            e.preventDefault();
+
+            let adlScores = [];
+            let total = 0;
+            for(let i=1; i<=10; i++) {
+                const radios = document.getElementsByName(`adl_${i}`);
+                let val = 0;
+                for(let r of radios) {
+                    if(r.checked) {
+                        val = parseInt(r.value);
+                        break;
+                    }
+                }
+                adlScores.push(val);
+                total += val;
+            }
+
+            const editId = document.getElementById('edit-id').value;
+            const docId = editId ? editId : 'LTC-' + Date.now();
+            const recordData = {
+                id: docId,
+                staffName: document.getElementById('staff-name').value,
+                staffArea: document.getElementById('staff-area').value,
+                assessmentDate: document.getElementById('assessment-date').value,
+                patientName: document.getElementById('patient-name').value,
+                patientCid: document.getElementById('patient-cid').value,
+                patientPhone: document.getElementById('patient-phone').value,
+                adlScores: adlScores,
+                totalScore: total,
+                ltcGroup: getLTCGroup(total).name,
+                updatedAt: new Date().toISOString()
+            };
+
+            if (db) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'assessments', docId);
+                    await setDoc(docRef, recordData);
+                    window.showToast("บันทึกข้อมูลขึ้นคลาวด์สำเร็จ (ทุกคนเห็นข้อมูลตรงกัน)", "success");
+                } catch (err) {
+                    console.error("Cloud save failed, falling back to local:", err);
+                    saveLocalFallback(recordData, editId);
+                }
+            } else {
+                saveLocalFallback(recordData, editId);
+            }
+
+            resetForm();
+            switchTab('records');
+        }
+
+        function saveLocalFallback(recordData, editId) {
+            if(editId) {
+                const idx = records.findIndex(r => r.id === editId);
+                if(idx !== -1) records[idx] = recordData;
+            } else {
+                records.unshift(recordData);
+            }
+            saveToLocalStorage();
+            updateDashboard();
+            renderRecordsTable();
+            window.showToast("บันทึกข้อมูลสำเร็จ (โหมดออฟไลน์)", "success");
+        }
+
+        window.resetForm = function() {
+            document.getElementById('adl-form').reset();
+            document.getElementById('edit-id').value = '';
+            document.getElementById('live-total-score').textContent = '0';
+            document.getElementById('preview-total-score').textContent = '0';
+            const mobileTopTotal = document.getElementById('mobile-top-total');
+            if(mobileTopTotal) mobileTopTotal.textContent = '0';
+
+            document.getElementById('preview-group-title').textContent = "กรุณาทำแบบประเมินให้ครบถ้วน";
+            document.getElementById('preview-group-desc').textContent = "ระบบคำนวณกลุ่ม LTC และแนะนำแนวทางดูแลตาม สปสช. ทันที";
+            for(let i=1; i<=10; i++) {
+                document.getElementById(`score-val-${i}`).textContent = '0 คะแนน';
+            }
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('assessment-date').value = today;
+        }
+
+        window.loadSampleData = function() {
+            document.getElementById('staff-name').value = "นางสาวกุศล ภักดี";
+            document.getElementById('staff-area').value = "รพ.สต.บ้านหนองผักชี";
+            document.getElementById('patient-name').value = "นายบุญมี ศรีสุข";
+            document.getElementById('patient-cid').value = "1609900123459";
+            document.getElementById('patient-phone').value = "0891234567";
+
+            const sampleScores = [5, 0, 5, 5, 5, 5, 5, 5, 5, 0];
+            for(let i=1; i<=10; i++) {
+                const radios = document.getElementsByName(`adl_${i}`);
+                for(let r of radios) {
+                    if(parseInt(r.value) === sampleScores[i-1]) r.checked = true;
+                }
+            }
+            calculateADL();
+            window.showToast("เติมข้อมูลตัวอย่างสำเร็จ", "success");
+        }
+
+        window.renderRecordsTable = function() {
+            const container = document.getElementById('records-container');
+            const searchVal = document.getElementById('search-input')?.value.toLowerCase() || '';
+            const filterGroup = document.getElementById('filter-group')?.value || '';
+            const sortOrder = document.getElementById('filter-sort')?.value || 'desc';
+
+            let filtered = records.filter(r => {
+                const matchSearch = r.patientName.toLowerCase().includes(searchVal) || r.patientCid.includes(searchVal);
+                const matchGroup = filterGroup ? r.ltcGroup === filterGroup : true;
+                return matchSearch && matchGroup;
+            });
+
+            filtered.sort((a, b) => {
+                const dateA = new Date(a.assessmentDate);
+                const dateB = new Date(b.assessmentDate);
+                return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+            });
+
+            document.getElementById('record-count-badge').textContent = records.length;
+
+            if(filtered.length === 0) {
+                container.innerHTML = `<div class="text-center py-10 text-slate-400 text-sm"><i class="fa-solid fa-folder-open text-3xl mb-2 block"></i> ไม่พบข้อมูลในระบบคลาวด์</div>`;
+            } else {
+                container.innerHTML = filtered.map(r => {
+                    const gInfo = getLTCGroup(r.totalScore);
+                    return `
+                        <div class="bg-white p-4 rounded-2xl border-2 border-slate-200 shadow-sm space-y-3">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <span class="text-[11px] font-bold text-slate-500">${r.assessmentDate}</span>
+                                    <h4 class="font-extrabold text-slate-900 text-sm sm:text-base">${r.patientName}</h4>
+                                    <p class="text-xs text-slate-500 font-mono">CID: ${r.patientCid} | โทร: ${r.patientPhone}</p>
+                                </div>
+                                <span class="px-2.5 py-1 rounded-full text-xs font-extrabold border ${gInfo.badge}">${r.ltcGroup} (${r.totalScore}/20)</span>
+                            </div>
+                            <div class="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl flex justify-between items-center">
+                                <div>ผู้กรอก: <strong class="text-slate-800">${r.staffName}</strong> (${r.staffArea})</div>
+                            </div>
+                            <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                                <button onclick="printRecord('${r.id}')" class="bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm"><i class="fa-solid fa-print"></i> พิมพ์</button>
+                                <button onclick="editRecord('${r.id}')" class="bg-amber-100 hover:bg-amber-200 text-amber-900 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm"><i class="fa-solid fa-pen"></i> แก้ไข</button>
+                                <button onclick="deleteRecord('${r.id}')" class="bg-rose-100 hover:bg-rose-200 text-rose-900 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm"><i class="fa-solid fa-trash"></i> ลบ</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            const recentContainer = document.getElementById('recent-records-container');
+            if(recentContainer) {
+                const recent = [...records].slice(0, 4);
+                if(recent.length === 0) {
+                    recentContainer.innerHTML = `<p class="text-center py-4 text-slate-400 text-xs">ยังไม่มีประวัติการประเมินในคลาวด์</p>`;
+                } else {
+                    recentContainer.innerHTML = recent.map(r => {
+                        const gInfo = getLTCGroup(r.totalScore);
+                        return `
+                            <div class="flex justify-between items-center p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+                                <div>
+                                    <div class="font-extrabold text-slate-900">${r.patientName}</div>
+                                    <div class="text-[10px] text-slate-500">${r.assessmentDate} • ผู้กรอก: ${r.staffName}</div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-extrabold border ${gInfo.badge}">${r.ltcGroup} (${r.totalScore}/20)</span>
+                                    <button onclick="printRecord('${r.id}')" class="bg-teal-600 text-white px-2 py-1 rounded text-xs font-bold"><i class="fa-solid fa-print"></i></button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+        }
+
+        function updateDashboard() {
+            const total = records.length;
+            let g1 = 0, g2 = 0, g3 = 0;
+            records.forEach(r => {
+                if(r.totalScore >= 12) g1++;
+                else if(r.totalScore >= 5) g2++;
+                else g3++;
+            });
+
+            document.getElementById('stat-total').textContent = total;
+            document.getElementById('stat-group1').textContent = g1;
+            document.getElementById('stat-group2').textContent = g2;
+            document.getElementById('stat-group3').textContent = g3;
+
+            if(pieChartInstance) {
+                pieChartInstance.data.datasets[0].data = [g1, g2, g3];
+                pieChartInstance.update();
+            }
+        }
+
+        function initPieChart() {
+            const ctx = document.getElementById('ltcPieChart').getContext('2d');
+            pieChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['กลุ่มติดสังคม', 'กลุ่มติดบ้าน', 'กลุ่มติดเตียง'],
+                    datasets: [{
+                        data: [0, 0, 0],
+                        backgroundColor: ['#22c55e', '#f59e0b', '#f43f5e'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        window.editRecord = function(id) {
+            const r = records.find(item => item.id === id);
+            if(!r) return;
+
+            document.getElementById('edit-id').value = r.id;
+            document.getElementById('staff-name').value = r.staffName;
+            document.getElementById('staff-area').value = r.staffArea;
+            document.getElementById('assessment-date').value = r.assessmentDate;
+            document.getElementById('patient-name').value = r.patientName;
+            document.getElementById('patient-cid').value = r.patientCid;
+            document.getElementById('patient-phone').value = r.patientPhone;
+
+            for(let i=0; i<10; i++) {
+                const val = r.adlScores[i];
+                const radios = document.getElementsByName(`adl_${i+1}`);
+                for(let rad of radios) {
+                    if(parseInt(rad.value) === val) rad.checked = true;
+                }
+            }
+
+            calculateADL();
+            switchTab('assessment');
+            window.showToast("โหลดข้อมูลสำหรับการแก้ไข", "success");
+        }
+
+        window.deleteRecord = async function(id) {
+            if(confirm("ท่านต้องการลบข้อมูลการประเมินนี้จากฐานข้อมูลกลางใช่หรือไม่?")) {
+                if (db) {
+                    try {
+                        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'assessments', id);
+                        await deleteDoc(docRef);
+                        window.showToast("ลบข้อมูลสำเร็จ", "success");
+                        return;
+                    } catch(err) {
+                        console.error("Cloud delete error:", err);
+                    }
+                }
+                records = records.filter(item => item.id !== id);
+                saveToLocalStorage();
+                renderRecordsTable();
+                updateDashboard();
+                window.showToast("ลบข้อมูลสำเร็จ", "success");
+            }
+        }
+
+        window.printRecord = function(id) {
+            const r = records.find(item => item.id === id);
+            if(!r) return;
+
+            const adlLabels = [
+                "1. การรับประทานอาหาร (Feeding)",
+                "2. การล้างหน้า หวีผม แปรงฟัน โกนหนวด (Grooming)",
+                "3. การใช้ห้องน้ำ (Toilet use)",
+                "4. การอาบน้ำ (Bathing)",
+                "5. การเคลื่อนย้ายตัวจากเตียงไปเก้าอี้ (Transfer)",
+                "6. การเดินภายในห้องหรือบ้าน (Mobility)",
+                "7. การขึ้นลงบันได (Stairs)",
+                "8. การใส่เสื้อผ้า (Dressing)",
+                "9. การกลั้นการขับถ่ายอุจจาระ (Bowels)",
+                "10. การกลั้นการขับถ่ายปัสสาวะ (Bladder)"
+            ];
+
+            let adlTableRows = '';
+            for(let i=0; i<10; i++) {
+                adlTableRows += `
+                    <tr>
+                        <td style="border: 1px solid #cbd5e1; padding: 5px 8px; font-size: 12px;">${adlLabels[i]}</td>
+                        <td style="border: 1px solid #cbd5e1; padding: 5px 8px; text-align: center; font-size: 12px; font-weight: bold;">${r.adlScores[i]} คะแนน</td>
+                    </tr>
+                `;
+            }
+
+            let careGuidelines = r.totalScore >= 12 ? "ส่งเสริมสุขภาพเชิงป้องกัน ออกกำลังกายสม่ำเสมอ โภชนาการ และการเข้ากลุ่มสังคม" : (r.totalScore >= 5 ? "ป้องกันการพลัดตกหกล้ม ปรับสภาพแวดล้อมบ้าน กายภาพบำบัดฟื้นฟู" : "ป้องกันแผลกดทับ (พลิกตัวทุก 2 ชม.), ระวังสำลัก, ทำกายภาพ Passive Exercise");
+
+            document.getElementById('printableArea').innerHTML = `
+                <div style="font-family: 'Sarabun', sans-serif; color: #1e293b; max-width: 800px; margin: 0 auto; background: white; padding: 20px;">
+                    <div style="text-align: center; border-bottom: 3px solid #0f766e; padding-bottom: 12px; margin-bottom: 15px;">
+                        <h2 style="font-size: 16px; font-weight: bold; color: #0f766e; margin: 0;">แบบรายงานผลการประเมิน Barthel ADL Index & LTC (Cloud Record)</h2>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 12px; background: #f8fafc; padding: 8px 10px; border-radius: 8px;">
+                        <div><strong>วันที่:</strong> ${r.assessmentDate} | <strong>ผู้กรอก:</strong> ${r.staffName} (${r.staffArea})</div>
+                    </div>
+                    <div style="margin-bottom: 12px; font-size: 12px;">
+                        <strong>ผู้ป่วย:</strong> ${r.patientName} | <strong>CID:</strong> ${r.patientCid} | <strong>โทร:</strong> ${r.patientPhone}
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #f1f5f9; font-size: 12px;">
+                                    <th style="border: 1px solid #cbd5e1; padding: 5px; text-align: left;">กิจวัตรประจำวัน</th>
+                                    <th style="border: 1px solid #cbd5e1; padding: 5px; text-align: center; width: 100px;">คะแนน</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${adlTableRows}
+                                <tr style="background: #f8fafc; font-weight: bold;">
+                                    <td style="border: 1px solid #cbd5e1; padding: 6px; text-align: right; font-size: 12px;">คะแนนรวม:</td>
+                                    <td style="border: 1px solid #cbd5e1; padding: 6px; text-align: center; color: #0f766e; font-size: 13px;">${r.totalScore} / 20</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px; border-radius: 8px; font-size: 12px;">
+                        <strong>กลุ่ม LTC:</strong> <span style="color: #047857;">${r.ltcGroup}</span><br>
+                        <strong>แนวทางดูแล:</strong> ${careGuidelines}
+                    </div>
+                </div>
+            `;
+            document.getElementById('print-modal').classList.remove('hidden');
+        }
+
+        window.openMasterReportModal = function() {
+            if(records.length === 0) {
+                window.showToast("ยังไม่มีข้อมูลสำหรับพิมพ์สรุป", "error");
+                return;
+            }
+            let tableRows = records.map((r, idx) => `
+                <tr>
+                    <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: center; font-size: 11px;">${idx + 1}</td>
+                    <td style="border: 1px solid #cbd5e1; padding: 4px; font-size: 11px; font-weight: bold;">${r.patientName}</td>
+                    <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: center; font-size: 11px;">${r.patientCid}</td>
+                    <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: center; font-size: 11px; font-weight: bold;">${r.totalScore}</td>
+                    <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: center; font-size: 11px;">${r.ltcGroup}</td>
+                    <td style="border: 1px solid #cbd5e1; padding: 4px; font-size: 11px;">${r.staffName} (${r.staffArea})</td>
+                    <td style="border: 1px solid #cbd5e1; padding: 4px; text-align: center; font-size: 11px;">${r.assessmentDate}</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('printableArea').innerHTML = `
+                <div style="font-family: 'Sarabun', sans-serif; color: #1e293b; max-width: 900px; margin: 0 auto; background: white; padding: 20px;">
+                    <div style="text-align: center; border-bottom: 3px solid #0f766e; padding-bottom: 10px; margin-bottom: 12px;">
+                        <h2 style="font-size: 16px; font-weight: bold; color: #0f766e; margin: 0;">รายงานสรุปผลการประเมิน Long Term Care (Cloud Database)</h2>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f1f5f9; font-size: 11px; font-weight: bold;">
+                                <th style="border: 1px solid #cbd5e1; padding: 5px; width: 30px;">ที่</th>
+                                <th style="border: 1px solid #cbd5e1; padding: 5px; text-align: left;">ชื่อ-นามสกุล</th>
+                                <th style="border: 1px solid #cbd5e1; padding: 5px;">เลขบัตรประชาชน</th>
+                                <th style="border: 1px solid #cbd5e1; padding: 5px; width: 50px;">ADL</th>
+                                <th style="border: 1px solid #cbd5e1; padding: 5px;">กลุ่ม LTC</th>
+                                <th style="border: 1px solid #cbd5e1; padding: 5px; text-align: left;">ผู้กรอกข้อมูล</th>
+                                <th style="border: 1px solid #cbd5e1; padding: 5px;">วันที่</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tableRows}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('print-modal').classList.remove('hidden');
+        }
+
+        window.closePrintModal = function() {
+            document.getElementById('print-modal').classList.add('hidden');
+        }
+
+        window.triggerPrintAction = function() {
+            window.print();
+        }
+
+        window.exportDataJSON = function() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(records, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", `ltc_adl_cloud_backup_${new Date().toISOString().split('T')[0]}.json`);
+            dlAnchorElem.click();
+            window.showToast("ส่งออกไฟล์สำรอง JSON สำเร็จ", "success");
+        }
+    </script>
+</body>
+</html>
