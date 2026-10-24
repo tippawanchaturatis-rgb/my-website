@@ -514,7 +514,6 @@
             }, 2000);
         }
 
-        // --- ฟังก์ชันดึงข้อมูลมาแก้ไข ---
         function editRecord(id) {
             const r = records.find(item => item.id === id);
             if(!r) return;
@@ -545,7 +544,6 @@
 
             calculateADL();
 
-            // ปรับข้อความ UI เป็นโหมดแก้ไข
             document.getElementById('form-mode-badge').textContent = 'โหมดแก้ไขข้อมูล';
             document.getElementById('form-mode-badge').className = 'bg-amber-100 text-amber-900 text-xs px-3 py-1 rounded-full font-extrabold';
             document.getElementById('submit-btn-text').textContent = 'อัปเดตการแก้ไขข้อมูล';
@@ -555,7 +553,6 @@
             showToast("ดึงข้อมูลมาเรียบร้อยแล้ว สามารถแก้ไขและกดอัปเดตได้เลย", "success");
         }
 
-        // --- ฟังก์ชันลบข้อมูล ---
         function deleteRecord(id, patientName) {
             if(!confirm(`คุณต้องการลบข้อมูลการประเมินของ "${patientName}" ออกจากฐานข้อมูลใช่หรือไม่?`)) return;
 
