@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบคัดกรองและประเมินภาวะพึ่งพิง (Barthel ADL Index) & LTC (Shared Central Cloud DB)</title>
+    <title>ระบบคัดกรองและประเมินภาวะพึ่งพิง (Barthel ADL Index) & LTC</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts -->
@@ -55,9 +55,6 @@
                 </button>
                 <button type="button" onclick="switchTab('records')" id="btn-tab-records" class="px-3 py-2 rounded-xl text-sm font-bold hover:bg-white/10 text-emerald-100 flex items-center gap-1.5 cursor-pointer">
                     <i class="fa-solid fa-database"></i> <span class="hidden md:inline">ฐานข้อมูลรวม</span> (<span id="record-count-badge">0</span>)
-                </button>
-                <button type="button" onclick="openMasterReportModal()" class="px-3 py-2 rounded-xl text-sm font-bold bg-teal-600 hover:bg-teal-700 text-white shadow flex items-center gap-1.5 cursor-pointer">
-                    <i class="fa-solid fa-print"></i> <span class="hidden md:inline">พิมพ์รายงาน</span>
                 </button>
             </div>
         </div>
@@ -170,7 +167,7 @@
                         <span class="bg-emerald-100 text-emerald-900 text-xs px-3 py-1 rounded-full font-extrabold">แบบประเมินมาตรฐาน</span>
                         <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">แบบประเมินดัชนีบาร์เธลเอดีแอล (Barthel ADL Index)</h2>
                     </div>
-                    <button type="button" onclick="loadSampleData()" class="bg-amber-100 text-amber-900 px-3 py-2 rounded-xl text-xs font-bold cursor-pointer"><i class="fa-solid fa-wand-magic-sparkles"></i> เติมตัวอย่าง</button>
+                    <button type="button" onclick="loadSampleData()" class="bg-amber-100 hover:bg-amber-200 text-amber-900 px-3 py-2 rounded-xl text-xs font-bold cursor-pointer"><i class="fa-solid fa-wand-magic-sparkles"></i> เติมตัวอย่าง</button>
                 </div>
 
                 <form id="adl-form" onsubmit="saveAssessment(event)" class="mt-6 space-y-6">
@@ -289,7 +286,7 @@
                         <p class="text-xs text-slate-500">ดึงข้อมูลทั้งหมดจาก Google Sheets มาแสดงผลเรียลไทม์</p>
                     </div>
                     <div class="flex gap-2">
-                        <button type="button" onclick="fetchCentralRecords(true)" class="bg-cyan-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow flex items-center gap-1.5 cursor-pointer">
+                        <button type="button" onclick="fetchCentralRecords(true)" class="bg-cyan-700 hover:bg-cyan-800 text-white px-4 py-2 rounded-xl text-xs font-bold shadow flex items-center gap-1.5 cursor-pointer">
                             <i class="fa-solid fa-rotate"></i> โหลดข้อมูลล่าสุด
                         </button>
                     </div>
@@ -342,8 +339,7 @@
 
     <!-- Application Script -->
     <script>
-        // ✅ ฝัง URL ของ Google Apps Script ของคุณไว้เรียบร้อยแล้ว
-        let gasUrl = "https://script.google.com/macros/s/AKfycbwILVBOeIwdHFYT_BihGnkB89NZRahkp0uhOAHYFKlXv25dJuJVt1qDTZiCZqpQE79Wlg/exec";
+        const gasUrl = "https://script.google.com/macros/s/AKfycbxICNhwJ_6gnO4RZoeHmWd0X4pybQ0FFRHcj6m06BlAGDzQt1ZG8-U48fT2AaeJB6_9/exec";
         let records = [];
         let pieChartInstance = null;
 
@@ -371,7 +367,7 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // JSONP Fetcher สำหรับดึงข้อมูลจาก Google Sheets กลาง
+        // ดึงข้อมูลผ่าน JSONP เพื่อให้รันข้ามโดเมนได้ 100%
         function fetchCentralRecords(notify = false) {
             if(!gasUrl) return;
             if(notify) showToast("กำลังดึงข้อมูลจาก Google Sheets...", "success");
@@ -381,7 +377,9 @@
             
             window[callbackName] = function(data) {
                 delete window[callbackName];
-                document.body.removeChild(script);
+                if(document.body.contains(script)) {
+                    document.body.removeChild(script);
+                }
                 if(Array.isArray(data)) {
                     records = data;
                     localStorage.setItem('ltc_records_cache', JSON.stringify(records));
@@ -394,7 +392,9 @@
             script.src = gasUrl + (gasUrl.includes('?') ? '&' : '?') + 'callback=' + callbackName;
             script.onerror = function() {
                 delete window[callbackName];
-                document.body.removeChild(script);
+                if(document.body.contains(script)) {
+                    document.body.removeChild(script);
+                }
                 try { records = JSON.parse(localStorage.getItem('ltc_records_cache') || '[]'); } catch(e){}
                 updateDashboard();
                 renderRecordsTable();
@@ -489,9 +489,10 @@
                 resetForm();
                 switchTab('records');
                 setTimeout(() => fetchCentralRecords(false), 1500);
-            }).catch(() => {
+            }).catch((err) => {
                 showToast("เกิดข้อผิดพลาดในการเชื่อมต่อ", "error");
                 submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> บันทึกข้อมูลขึ้น Google Sheets กลาง';
             });
         }
 
