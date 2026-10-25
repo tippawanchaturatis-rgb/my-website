@@ -3,26 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบคัดกรองและประเมินภาวะพึ่งพิง (Barthel ADL Index) & LTC</title>
+    <title>แบบประเมินความพึงพอใจการใช้ระบบสารสนเทศ (LTC Evaluation)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Font Awesome Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Sarabun', 'Inter', 'sans-serif'] }
-                }
-            }
-        }
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Sarabun', 'sans-serif'] } } } }
     </script>
     <style>
-        body { font-family: 'Sarabun', 'Inter', sans-serif; font-size: 1.05rem; }
+        body { font-family: 'Sarabun', sans-serif; }
         @media print {
             body * { visibility: hidden !important; }
             #print-modal, #print-modal *, #printableArea, #printableArea * { visibility: visible !important; }
@@ -32,301 +24,197 @@
         }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-900 min-h-screen flex flex-col pb-20 md:pb-0">
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col justify-between">
 
-    <!-- Header Navigation -->
-    <header id="main-header" class="bg-gradient-to-r from-emerald-800 via-teal-800 to-cyan-900 text-white shadow-md sticky top-0 z-40 no-print">
-        <div class="max-w-7xl mx-auto px-3 sm:px-4 py-3 flex flex-wrap justify-between items-center">
-            <div class="flex items-center space-x-2.5">
-                <div class="bg-white/15 p-2.5 rounded-xl backdrop-blur-sm border border-white/20">
-                    <i class="fa-solid fa-notes-medical text-2xl text-emerald-300"></i>
-                </div>
-                <div>
-                    <h1 class="text-base sm:text-xl font-extrabold tracking-wide">LTC & Barthel ADL (ฐานข้อมูลกลาง)</h1>
-                    <p class="text-xs text-emerald-200 hidden sm:block">ระบบบันทึก แก้ไข ลบ และพิมพ์รายงานสรุปผล</p>
-                </div>
-            </div>
-            <div class="flex items-center space-x-1 sm:space-x-2">
-                <button type="button" onclick="switchTab('dashboard')" id="btn-tab-dashboard" class="px-3 py-2 rounded-xl text-sm font-bold bg-white/25 text-white shadow-inner flex items-center gap-1.5 cursor-pointer">
-                    <i class="fa-solid fa-chart-pie"></i> <span class="hidden md:inline">ภาพรวม</span>
-                </button>
-                <button type="button" onclick="switchTab('assessment')" id="btn-tab-assessment" class="px-3 py-2 rounded-xl text-sm font-bold hover:bg-white/10 text-emerald-100 flex items-center gap-1.5 cursor-pointer">
-                    <i class="fa-solid fa-file-circle-plus"></i> <span class="hidden md:inline">ประเมินใหม่</span>
-                </button>
-                <button type="button" onclick="switchTab('records')" id="btn-tab-records" class="px-3 py-2 rounded-xl text-sm font-bold hover:bg-white/10 text-emerald-100 flex items-center gap-1.5 cursor-pointer">
-                    <i class="fa-solid fa-database"></i> <span class="hidden md:inline">ฐานข้อมูลรวม</span> (<span id="record-count-badge">0</span>)
-                </button>
-            </div>
-        </div>
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-teal-800 to-emerald-800 text-white shadow-md py-6 px-4 text-center no-print">
+        <h1 class="text-xl sm:text-2xl font-extrabold">แบบประเมินความพึงพอใจการใช้งานระบบ</h1>
+        <p class="text-xs sm:text-sm text-teal-100 mt-1">ระบบบันทึกและประเมินภาวะพึ่งพิง (Barthel ADL & LTC)</p>
     </header>
 
-    <!-- Main Container -->
-    <main class="flex-grow max-w-7xl w-full mx-auto px-3 sm:px-4 py-4 sm:py-6 no-print">
+    <!-- Main Content -->
+    <main class="max-w-3xl w-full mx-auto px-4 py-6 flex-grow no-print">
 
         <!-- Toast Notification -->
-        <div id="toast" class="fixed bottom-20 md:bottom-5 right-4 left-4 md:left-auto z-50 transform translate-y-20 opacity-0 transition-all duration-300 max-w-md mx-auto pointer-events-none">
-            <div id="toast-content" class="flex items-center gap-3 p-4 rounded-2xl shadow-2xl border text-sm sm:text-base font-bold bg-emerald-50 border-emerald-200 text-emerald-900">
-                <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-700 text-xl sm:text-2xl"></i>
-                <span id="toast-message"></span>
-            </div>
+        <div id="toast" class="hidden mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 font-bold text-sm sm:text-base flex items-center gap-3 shadow">
+            <i class="fa-solid fa-circle-check text-emerald-600 text-xl"></i>
+            <span id="toast-msg">บันทึกแบบประเมินสำเร็จ ขอบคุณสำหรับความคิดเห็นของท่าน</span>
         </div>
 
-        <!-- TAB 1: DASHBOARD -->
-        <section id="tab-dashboard" class="space-y-5">
-            <div class="bg-gradient-to-r from-emerald-700 to-teal-800 rounded-3xl p-5 sm:p-8 text-white shadow-xl flex flex-col md:flex-row justify-between items-center gap-5">
-                <div class="space-y-2.5 text-center md:text-left">
-                    <span class="bg-white/20 text-emerald-100 text-xs px-3.5 py-1 rounded-full uppercase tracking-wider font-bold">ระบบฐานข้อมูลกลาง Google Sheets</span>
-                    <h2 class="text-xl sm:text-3xl font-extrabold">ระบบประเมินดัชนีบาร์เธลเอดีแอล (Barthel ADL)</h2>
-                    <p class="text-emerald-100 text-xs sm:text-base max-w-2xl font-medium leading-relaxed">
-                        จัดการข้อมูลผู้สูงอายุและผู้มีภาวะพึ่งพิง พร้อมฟังก์ชันพิมพ์รายงานสรุปผลทั้งแบบรายบุคคลและภาพรวม
-                    </p>
-                </div>
-                <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                    <button type="button" onclick="switchTab('assessment')" class="bg-white text-emerald-900 hover:bg-emerald-50 px-5 py-3.5 rounded-2xl font-extrabold text-sm sm:text-base shadow-lg transition flex items-center justify-center gap-2 cursor-pointer">
-                        <i class="fa-solid fa-plus-circle text-lg text-emerald-600"></i> เริ่มทำแบบประเมิน
-                    </button>
-                    <button type="button" onclick="printSummaryReport()" class="bg-teal-900 text-white hover:bg-teal-950 px-5 py-3.5 rounded-2xl font-extrabold text-sm sm:text-base shadow-lg transition flex items-center justify-center gap-2 cursor-pointer">
-                        <i class="fa-solid fa-print text-lg text-teal-300"></i> พิมพ์รายงานสรุปภาพรวม
-                    </button>
-                </div>
-            </div>
+        <!-- Tabs Navigation -->
+        <div class="flex rounded-2xl bg-slate-200 p-1 mb-6">
+            <button type="button" onclick="switchTab('form')" id="btn-tab-form" class="flex-1 py-2.5 rounded-xl font-bold text-sm bg-white text-teal-900 shadow transition cursor-pointer">
+                <i class="fa-solid fa-pen-to-square"></i> ทำแบบประเมิน
+            </button>
+            <button type="button" onclick="switchTab('summary')" id="btn-tab-summary" class="flex-1 py-2.5 rounded-xl font-bold text-sm text-slate-600 transition cursor-pointer">
+                <i class="fa-solid fa-chart-pie"></i> ดูผลสรุปภาพรวม
+            </button>
+        </div>
 
-            <!-- Stats Overview Cards -->
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
-                <div class="bg-white p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between">
-                    <div>
-                        <p class="text-xs sm:text-sm font-bold text-slate-500 uppercase">ผู้รับการประเมิน</p>
-                        <h3 id="stat-total" class="text-2xl sm:text-4xl font-extrabold text-slate-900 mt-1">0</h3>
-                        <p class="text-[11px] sm:text-xs font-semibold text-slate-400">รวมทั้งหมด</p>
-                    </div>
-                    <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-700 text-xl font-bold">
-                        <i class="fa-solid fa-clipboard-user"></i>
-                    </div>
-                </div>
-                <div class="bg-white p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between">
-                    <div>
-                        <p class="text-xs sm:text-sm font-bold text-emerald-700 uppercase">ติดสังคม (12-20)</p>
-                        <h3 id="stat-group1" class="text-2xl sm:text-4xl font-extrabold text-emerald-800 mt-1">0</h3>
-                    </div>
-                    <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-700 text-xl font-bold">
-                        <i class="fa-solid fa-person-walking"></i>
-                    </div>
-                </div>
-                <div class="bg-white p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between">
-                    <div>
-                        <p class="text-xs sm:text-sm font-bold text-amber-700 uppercase">ติดบ้าน (5-11)</p>
-                        <h3 id="stat-group2" class="text-2xl sm:text-4xl font-extrabold text-amber-800 mt-1">0</h3>
-                    </div>
-                    <div class="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-700 text-xl font-bold">
-                        <i class="fa-solid fa-house-chimney"></i>
+        <!-- TAB 1: FORM -->
+        <section id="tab-form" class="space-y-6">
+            <form id="eval-form" onsubmit="submitEvaluation(event)" class="bg-white p-5 sm:p-8 rounded-3xl shadow-sm border border-slate-200 space-y-6">
+                
+                <!-- Evaluator Info -->
+                <div class="bg-teal-50/50 p-4 rounded-2xl border border-teal-100 space-y-4">
+                    <h3 class="text-sm font-extrabold text-teal-900 uppercase"><i class="fa-solid fa-user-gear"></i> ข้อมูลทั่วไปของผู้ตอบแบบประเมิน</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อ-นามสกุล (ไม่บังคับ)</label>
+                            <input type="text" id="evaluatorName" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-sm" placeholder="ระบุชื่อ หรือ 'ไม่ประสงค์ออกนาม'">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">สถานะ / ตำแหน่งงาน</label>
+                            <select id="evaluatorRole" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-sm">
+                                <option value="พยาบาลวิชาชีพ">พยาบาลวิชาชีพ</option>
+                                <option value="บุคลากรสาธารณสุข / รพ.สต.">บุคลากรสาธารณสุข / รพ.สต.</option>
+                                <option value="อสม. / Care Manager / Care Giver">อสม. / Care Manager / Care Giver</option>
+                                <option value="อื่นๆ">อื่นๆ</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
-                <div class="bg-white p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between">
-                    <div>
-                        <p class="text-xs sm:text-sm font-bold text-rose-700 uppercase">ติดเตียง (0-4)</p>
-                        <h3 id="stat-group3" class="text-2xl sm:text-4xl font-extrabold text-rose-800 mt-1">0</h3>
-                    </div>
-                    <div class="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-700 text-xl font-bold">
-                        <i class="fa-solid fa-bed"></i>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Recent Table & Chart -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200 lg:col-span-1">
-                    <h3 class="text-base font-bold text-slate-900 mb-2"><i class="fa-solid fa-chart-pie text-teal-700"></i> สัดส่วนกลุ่มผู้ป่วย LTC</h3>
-                    <div class="relative w-full h-52 flex justify-center items-center">
-                        <canvas id="ltcPieChart"></canvas>
+                <!-- Questions -->
+                <div class="space-y-6">
+                    <h3 class="text-sm font-extrabold text-slate-800 uppercase border-b pb-2"><i class="fa-solid fa-list-check"></i> แบบประเมินระดับความพึงพอใจ (เกณฑ์ 5 ระดับ)</h3>
+
+                    <!-- Q1 -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-bold text-slate-900">1. ด้านการออกแบบหน้าจอและความสะดวกในการใช้งานระบบ (Usability)</label>
+                        <div class="grid grid-cols-5 gap-1 sm:gap-2 text-center text-xs">
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q1" value="1" required class="block mx-auto mb-1"> 1<br><span class="text-[10px] text-slate-500">น้อยที่สุด</span></label>
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q1" value="2" class="block mx-auto mb-1"> 2<br><span class="text-[10px] text-slate-500">น้อย</span></label>
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q1" value="3" class="block mx-auto mb-1"> 3<br><span class="text-[10px] text-slate-500">ปานกลาง</span></label>
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q1" value="4" class="block mx-auto mb-1"> 4<br><span class="text-[10px] text-slate-500">มาก</span></label>
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q1" value="5" class="block mx-auto mb-1"> 5<br><span class="text-[10px] text-slate-500">มากที่สุด</span></label>
+                        </div>
+                    </div>
+
+                    <!-- Q2 -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-bold text-slate-900">2. ด้านความรวดเร็วในการบันทึก แก้ไข และเรียกดูข้อมูลผู้รับบริการ</label>
+                        <div class="grid grid-cols-5 gap-1 sm:gap-2 text-center text-xs">
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q2" value="1" required class="block mx-auto mb-1"> 1</label>
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q2" value="2" class="block mx-auto mb-1"> 2</label>
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q2" value="3" class="block mx-auto mb-1"> 3</label>
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q2" value="4" class="block mx-auto mb-1"> 4</label>
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q2" value="5" class="block mx-auto mb-1"> 5</label>
+                        </div>
+                    </div>
+
+                    <!-- Q3 -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-bold text-slate-900">3. ด้านความถูกต้องแม่นยำในการคำนวณคะแนน ADL และการจัดกลุ่ม LTC อัตโนมัติ</label>
+                        <div class="grid grid-cols-5 gap-1 sm:gap-2 text-center text-xs">
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q3" value="1" required class="block mx-auto mb-1"> 1</label>
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q3" value="2" class="block mx-auto mb-1"> 2</label>
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q3" value="3" class="block mx-auto mb-1"> 3</label>
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q3" value="4" class="block mx-auto mb-1"> 4</label>
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q3" value="5" class="block mx-auto mb-1"> 5</label>
+                        </div>
+                    </div>
+
+                    <!-- Q4 -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-bold text-slate-900">4. ด้านระบบสรุปผล (Dashboard) และฟังก์ชันพิมพ์รายงานรายบุคคล/ภาพรวม</label>
+                        <div class="grid grid-cols-5 gap-1 sm:gap-2 text-center text-xs">
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q4" value="1" required class="block mx-auto mb-1"> 1</label>
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q4" value="2" class="block mx-auto mb-1"> 2</label>
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q4" value="3" class="block mx-auto mb-1"> 3</label>
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q4" value="4" class="block mx-auto mb-1"> 4</label>
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q4" value="5" class="block mx-auto mb-1"> 5</label>
+                        </div>
+                    </div>
+
+                    <!-- Q5 -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-bold text-slate-900">5. ประโยชน์ของระบบในการช่วยลดภาระงานและเพิ่มประสิทธิภาพการปฏิบัติงานจริง</label>
+                        <div class="grid grid-cols-5 gap-1 sm:gap-2 text-center text-xs">
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q5" value="1" required class="block mx-auto mb-1"> 1</label>
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q5" value="2" class="block mx-auto mb-1"> 2</label>
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q5" value="3" class="block mx-auto mb-1"> 3</label>
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q5" value="4" class="block mx-auto mb-1"> 4</label>
+                            <label class="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-teal-50 cursor-pointer"><input type="radio" name="q5" value="5" class="block mx-auto mb-1"> 5</label>
+                        </div>
                     </div>
                 </div>
-                <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200 lg:col-span-2">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-base font-bold text-slate-900"><i class="fa-solid fa-clock-rotate-left text-teal-700"></i> รายการล่าสุดจากฐานข้อมูลกลาง</h3>
-                        <button type="button" onclick="switchTab('records')" class="text-xs text-teal-700 font-bold">ดูทั้งหมด <i class="fa-solid fa-arrow-right"></i></button>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs">
-                            <thead>
-                                <tr class="border-b text-slate-500 font-bold">
-                                    <th class="py-2">วันที่</th>
-                                    <th class="py-2">ชื่อผู้ป่วย</th>
-                                    <th class="py-2 text-center">คะแนน ADL</th>
-                                    <th class="py-2 text-center">กลุ่ม LTC</th>
-                                </tr>
-                            </thead>
-                            <tbody id="recent-records-tbody" class="divide-y text-slate-800"></tbody>
-                        </table>
-                    </div>
+
+                <!-- Suggestion -->
+                <div>
+                    <label class="block text-sm font-bold text-slate-800 mb-1">ข้อเสนอแนะเพิ่มเติม</label>
+                    <textarea id="suggestion" rows="3" class="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm" placeholder="พิมพ์ข้อเสนอแนะ..."></textarea>
                 </div>
-            </div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="submit-btn" class="w-full bg-teal-700 hover:bg-teal-800 text-white py-4 rounded-xl font-extrabold text-base shadow-lg transition cursor-pointer flex justify-center items-center gap-2">
+                    <i class="fa-solid fa-paper-plane"></i> ส่งแบบประเมินความพึงพอใจ
+                </button>
+            </form>
         </section>
 
-        <!-- TAB 2: ASSESSMENT FORM -->
-        <section id="tab-assessment" class="hidden space-y-5">
-            <div class="bg-white p-4 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
-                <div class="flex justify-between items-center pb-5 border-b gap-3">
+        <!-- TAB 2: SUMMARY DASHBOARD -->
+        <section id="tab-summary" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 space-y-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4 gap-3">
                     <div>
-                        <span id="form-mode-badge" class="bg-emerald-100 text-emerald-900 text-xs px-3 py-1 rounded-full font-extrabold">แบบประเมินมาตรฐาน</span>
-                        <h2 id="form-title" class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">แบบประเมินดัชนีบาร์เธลเอดีแอล (Barthel ADL Index)</h2>
+                        <h2 class="text-base font-extrabold text-slate-900">ผลสรุปคะแนนความพึงพอใจภาพรวม</h2>
+                        <p class="text-xs text-slate-500">ข้อมูลอัปเดตแบบเรียลไทม์จาก Google Sheets</p>
                     </div>
-                    <div class="flex gap-2">
-                        <button type="button" onclick="resetForm()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-3 py-2 rounded-xl text-xs font-bold cursor-pointer"><i class="fa-solid fa-rotate-right"></i> ล้างฟอร์ม</button>
-                        <button type="button" onclick="loadSampleData()" class="bg-amber-100 hover:bg-amber-200 text-amber-900 px-3 py-2 rounded-xl text-xs font-bold cursor-pointer"><i class="fa-solid fa-wand-magic-sparkles"></i> เติมตัวอย่าง</button>
-                    </div>
-                </div>
-
-                <form id="adl-form" onsubmit="saveAssessment(event)" class="mt-6 space-y-6">
-                    <input type="hidden" id="edit-id" value="">
-
-                    <!-- Part 1: Staff Info -->
-                    <div class="bg-emerald-50/60 p-4 sm:p-6 rounded-2xl border border-emerald-200 space-y-4">
-                        <h3 class="text-sm font-extrabold text-emerald-900 uppercase"><i class="fa-solid fa-user-shield text-emerald-700"></i> ส่วนที่ 1: ข้อมูลผู้ประเมิน</h3>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <div>
-                                <label class="block text-sm font-bold text-slate-800 mb-1">ชื่อผู้กรอกข้อมูล *</label>
-                                <input type="text" id="staff-name" required class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white" placeholder="เช่น นส.ดารารัตน์ อสม.">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-bold text-slate-800 mb-1">พื้นที่รับผิดชอบ *</label>
-                                <input type="text" id="staff-area" required class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white" placeholder="เช่น หมู่ 3 รพ.สต.บ้านหนองผักชี">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-bold text-slate-800 mb-1">วันที่ประเมิน *</label>
-                                <input type="date" id="assessment-date" required class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Part 2: Patient Info -->
-                    <div class="bg-teal-50/60 p-4 sm:p-6 rounded-2xl border border-teal-200 space-y-4">
-                        <h3 class="text-sm font-extrabold text-teal-900 uppercase"><i class="fa-solid fa-hospital-user text-teal-700"></i> ส่วนที่ 2: ข้อมูลผู้รับการประเมิน</h3>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <div>
-                                <label class="block text-sm font-bold text-slate-800 mb-1">ชื่อ-นามสกุล *</label>
-                                <input type="text" id="patient-name" required class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white" placeholder="นายสมชาย ใจดี">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-bold text-slate-800 mb-1">เลขบัตรประชาชน (13 หลัก) *</label>
-                                <input type="text" id="patient-cid" maxlength="13" required class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white" placeholder="1609900123456">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-bold text-slate-800 mb-1">เบอร์โทรศัพท์ *</label>
-                                <input type="text" id="patient-phone" required class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white" placeholder="0812345678">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Part 3: ADL 10 Items -->
-                    <div class="space-y-4">
-                        <div class="flex justify-between items-center bg-cyan-900 text-white p-4 rounded-2xl">
-                            <h3 class="text-sm font-extrabold uppercase"><i class="fa-solid fa-list-check"></i> ส่วนที่ 3: กิจวัตรประจำวัน 10 ข้อ (ADL)</h3>
-                            <div class="text-right">
-                                <span class="text-xs text-cyan-200 block font-bold">คะแนนรวม</span>
-                                <span id="live-total-score" class="text-2xl font-extrabold">0</span> /20
-                            </div>
-                        </div>
-
-                        <!-- 10 Questions Grid -->
-                        <div class="space-y-4" id="adl-items-container">
-                            <script>
-                                const adlQuestionsMeta = [
-                                    { id: 1, title: "1. การรับประทานอาหาร (Feeding)", options: [{v:0, t:"ตักอาหารเข้าปากเองไม่ได้ ต้องมีคนป้อนให้ (0 คะแนน)"}, {v:5, t:"ตักกินเองได้ แต่ต้องมีคนช่วยตัดหรือเตรียมให้ (5 คะแนน)"}, {v:10, t:"กินอาหารเองได้ปกติ (10 คะแนน)"}] },
-                                    { id: 2, title: "2. การล้างหน้า หวีผม แปรงฟัน (Grooming)", options: [{v:0, t:"ต้องมีคนทำให้หรือช่วยเหลือ (0 คะแนน)"}, {v:5, t:"ทำความสะอาดหน้าผมฟันได้เองทั้งหมด (5 คะแนน)"}] },
-                                    { id: 3, title: "3. การใช้ห้องน้ำ (Toilet use)", options: [{v:0, t:"ช่วยตัวเองไม่ได้เลย ต้องมีคนพาไปและทำความสะอาดให้ (0 คะแนน)"}, {v:5, t:"ช่วยตัวเองได้บ้าง แต่ต้องการคนช่วยพยุงหรือเช็ดทำความสะอาด (5 คะแนน)"}, {v:10, t:"ไปห้องน้ำและทำความสะอาดได้เองปลอดภัย (10 คะแนน)"}] },
-                                    { id: 4, title: "4. การอาบน้ำ (Bathing)", options: [{v:0, t:"ต้องมีคนช่วยอาบน้ำหรือทำให้ทั้งหมด (0 คะแนน)"}, {v:5, t:"อาบน้ำเองได้ทั้งหมด (5 คะแนน)"}] },
-                                    { id: 5, title: "5. การเคลื่อนย้ายตัวจากเตียงไปเก้าอี้ (Transfer)", options: [{v:0, t:"ลุกนั่งไม่ได้เลย ต้องมีคนอุ้ม 2 คน (0 คะแนน)"}, {v:5, t:"ต้องการคนช่วยมาก มีคนพยุง 1 คน (5 คะแนน)"}, {v:10, t:"ต้องการคนช่วยแนะนำหรือพยุงเล็กน้อย (10 คะแนน)"}, {v:15, t:"ลุกนั่งย้ายตัวได้เองปลอดภัย (15 คะแนน)"}] },
-                                    { id: 6, title: "6. การเดินภายในห้องหรือบ้าน (Mobility)", options: [{v:0, t:"เดินไม่ได้ หรือนั่งรถเข็นตลอดเวลา (0 คะแนน)"}, {v:5, t:"ใช้วีลแชร์ขับเคลื่อนเองได้ (5 คะแนน)"}, {v:10, t:"เดินได้โดยมีคนพยุง หรือใช้ไม้เท้า/Walker (10 คะแนน)"}, {v:15, t:"เดินได้เองคล่องแคล่วปลอดภัย (15 คะแนน)"}] },
-                                    { id: 7, title: "7. การขึ้นลงบันได (Stairs)", options: [{v:0, t:"ไม่สามารถขึ้นลงบันไดได้เลย (0 คะแนน)"}, {v:5, t:"ต้องการคนช่วยประคองหรือดูแลความปลอดภัย (5 คะแนน)"}, {v:10, t:"ขึ้นลงบันไดได้เองอิสระปลอดภัย (10 คะแนน)"}] },
-                                    { id: 8, title: "8. การใส่เสื้อผ้า (Dressing)", options: [{v:0, t:"ต้องมีคนสวมใส่ให้ ทำเองไม่ได้ (0 คะแนน)"}, {v:5, t:"ช่วยตัวเองได้ครึ่งหนึ่ง ใส่ได้แต่ติดกระดุมไม่ได้ (5 คะแนน)"}, {v:10, t:"ใส่เสื้อผ้าเองได้เรียบร้อยปกติ (10 คะแนน)"}] },
-                                    { id: 9, title: "9. การกลั้นการขับถ่ายอุจจาระ (Bowels)", options: [{v:0, t:"กลั้นไม่ได้ หรือต้องสวนอุจจาระเสมอ (0 คะแนน)"}, {v:5, t:"กลั้นไม่ได้บางครั้ง (สัปดาห์ละ 1 ครั้ง) (5 คะแนน)"}, {v:10, t:"กลั้นอุจจาระได้ปกติ (10 คะแนน)"}] },
-                                    { id: 10, title: "10. การกลั้นการขับถ่ายปัสสาวะ (Bladder)", options: [{v:0, t:"กลั้นไม่ได้ หรือใส่สายสวนปัสสาวะคาไว้ (0 คะแนน)"}, {v:5, t:"กลั้นไม่ได้บางครั้ง เป็นบางวัน (5 คะแนน)"}, {v:10, t:"กลั้นปัสสาวะได้ปกติ (10 คะแนน)"}] }
-                                ];
-                                document.write(adlQuestionsMeta.map(q => `
-                                    <div class="bg-white p-5 rounded-2xl border-2 border-slate-200 space-y-3">
-                                        <div class="flex justify-between items-center">
-                                            <h4 class="font-extrabold text-slate-900">${q.title}</h4>
-                                            <span class="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200" id="score-val-${q.id}">0 คะแนน</span>
-                                        </div>
-                                        <div class="space-y-2 pt-1">
-                                            ${q.options.map(opt => `
-                                                <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm font-medium">
-                                                    <input type="radio" name="adl_${q.id}" value="${opt.v}" onchange="calculateADL()" class="mt-1 w-4 h-4 text-emerald-600" required>
-                                                    <div>${opt.t}</div>
-                                                </label>
-                                            `).join('')}
-                                        </div>
-                                    </div>
-                                `).join(''));
-                            </script>
-                        </div>
-                    </div>
-
-                    <!-- Summary Box -->
-                    <div id="evaluation-preview-box" class="bg-slate-900 text-white p-5 rounded-2xl shadow-xl space-y-2">
-                        <div class="flex justify-between items-center">
-                            <h3 id="preview-group-title" class="text-lg font-extrabold text-emerald-400">กรุณาทำแบบประเมินให้ครบถ้วน</h3>
-                            <div class="text-right"><span id="preview-total-score" class="text-2xl font-extrabold">0</span> /20 คะแนน</div>
-                        </div>
-                        <div id="preview-group-desc" class="text-xs text-slate-300">ระบบจะคำนวณกลุ่ม LTC และข้อแนะนำการดูแลให้อัตโนมัติ</div>
-                    </div>
-
-                    <!-- Submit Buttons -->
-                    <div class="flex justify-end gap-3 pt-4 border-t">
-                        <button type="submit" id="submit-btn" class="bg-emerald-700 hover:bg-emerald-800 text-white px-7 py-3 rounded-xl text-base font-extrabold shadow-lg transition flex items-center gap-2 cursor-pointer">
-                            <i class="fa-solid fa-cloud-arrow-up"></i> <span id="submit-btn-text">บันทึกข้อมูลขึ้น Google Sheets กลาง</span>
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <button type="button" onclick="printDetailedReport()" class="flex-1 sm:flex-none bg-teal-700 hover:bg-teal-800 text-white px-4 py-2 rounded-xl text-xs font-bold shadow flex items-center justify-center gap-1.5 cursor-pointer">
+                            <i class="fa-solid fa-print"></i> พิมพ์รายงานสรุปแบบละเอียด
                         </button>
-                    </div>
-                </form>
-            </div>
-        </section>
-
-        <!-- TAB 3: RECORDS DATABASE -->
-        <section id="tab-records" class="hidden space-y-5">
-            <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200 space-y-4">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <div>
-                        <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
-                            <i class="fa-solid fa-database text-teal-700"></i> ฐานข้อมูลกลาง Google Sheets (รวมทุกคน)
-                        </h2>
-                        <p class="text-xs text-slate-500">ดึงข้อมูลทั้งหมดจาก Google Sheets มาแสดงผลเรียลไทม์</p>
-                    </div>
-                    <div class="flex gap-2">
-                        <button type="button" onclick="printSummaryReport()" class="bg-teal-700 hover:bg-teal-800 text-white px-4 py-2 rounded-xl text-xs font-bold shadow flex items-center gap-1.5 cursor-pointer">
-                            <i class="fa-solid fa-print"></i> พิมพ์รายงานสรุปภาพรวม
-                        </button>
-                        <button type="button" onclick="fetchCentralRecords(true)" class="bg-cyan-700 hover:bg-cyan-800 text-white px-4 py-2 rounded-xl text-xs font-bold shadow flex items-center gap-1.5 cursor-pointer">
-                            <i class="fa-solid fa-rotate"></i> โหลดข้อมูลล่าสุด
+                        <button type="button" onclick="loadSummaryData()" class="bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl text-xs font-bold cursor-pointer" title="รีเฟรช">
+                            <i class="fa-solid fa-rotate"></i>
                         </button>
                     </div>
                 </div>
 
-                <!-- Search -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <input type="text" id="search-input" oninput="renderRecordsTable()" class="px-4 py-2.5 text-sm rounded-xl border border-slate-300" placeholder="ค้นหาชื่อผู้ป่วย / CID...">
-                    <select id="filter-group" onchange="renderRecordsTable()" class="px-3 py-2.5 text-sm rounded-xl border border-slate-300">
-                        <option value="">-- กรองทุกกลุ่ม LTC --</option>
-                        <option value="กลุ่มติดสังคม">กลุ่มติดสังคม (12-20)</option>
-                        <option value="กลุ่มติดบ้าน">กลุ่มติดบ้าน (5-11)</option>
-                        <option value="กลุ่มติดเตียง">กลุ่มติดเตียง (0-4)</option>
-                    </select>
+                <!-- Stat Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div class="bg-teal-50 border border-teal-100 p-4 rounded-2xl text-center">
+                        <span class="text-xs text-teal-800 font-bold block">ผู้ประเมินทั้งหมด</span>
+                        <h3 id="stat-total" class="text-3xl font-extrabold text-teal-900 mt-1">0</h3>
+                        <span class="text-[10px] text-teal-600">คน</span>
+                    </div>
+                    <div class="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl text-center">
+                        <span class="text-xs text-emerald-800 font-bold block">เฉลี่ยภาพรวม</span>
+                        <h3 id="stat-overall" class="text-3xl font-extrabold text-emerald-900 mt-1">0.00</h3>
+                        <span class="text-[10px] text-emerald-600">จาก 5.00 คะแนน</span>
+                    </div>
+                    <div class="bg-cyan-50 border border-cyan-100 p-4 rounded-2xl text-center col-span-2 sm:col-span-1">
+                        <span class="text-xs text-cyan-800 font-bold block">ด้านการลดภาระงาน</span>
+                        <h3 id="stat-q5" class="text-3xl font-extrabold text-cyan-900 mt-1">0.00</h3>
+                        <span class="text-[10px] text-cyan-600">คะแนนเฉลี่ยข้อ 5</span>
+                    </div>
                 </div>
 
-                <!-- Table -->
-                <div class="overflow-x-auto rounded-xl border border-slate-200">
-                    <table class="w-full text-left text-xs">
-                        <thead class="bg-slate-100 text-slate-700 font-extrabold uppercase">
-                            <tr>
-                                <th class="py-3 px-2">วันที่</th>
-                                <th class="py-3 px-2">ผู้ป่วย / CID</th>
-                                <th class="py-3 px-2">ผู้ประเมิน</th>
-                                <th class="py-3 px-2 text-center">ADL</th>
-                                <th class="py-3 px-2 text-center">กลุ่ม LTC</th>
-                                <th class="py-3 px-2 text-center">จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="records-tbody" class="divide-y divide-slate-200 bg-white"></tbody>
-                    </table>
+                <!-- Detailed Averages -->
+                <div class="space-y-3 pt-2">
+                    <h3 class="text-xs font-extrabold uppercase text-slate-500">คะแนนเฉลี่ยรายข้อประเมิน</h3>
+                    <div class="space-y-2 text-xs font-medium">
+                        <div>
+                            <div class="flex justify-between mb-1"><span>1. ด้านการออกแบบหน้าจอและใช้งาน</span> <strong id="avg-1">0.00</strong></div>
+                            <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden"><div id="bar-1" class="bg-teal-600 h-full rounded-full" style="width: 0%"></div></div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1"><span>2. ด้านความรวดเร็วในการบันทึก/แก้ไข</span> <strong id="avg-2">0.00</strong></div>
+                            <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden"><div id="bar-2" class="bg-teal-600 h-full rounded-full" style="width: 0%"></div></div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1"><span>3. ด้านความถูกต้องแม่นยำคำนวณ ADL/LTC</span> <strong id="avg-3">0.00</strong></div>
+                            <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden"><div id="bar-3" class="bg-teal-600 h-full rounded-full" style="width: 0%"></div></div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1"><span>4. ด้านระบบสรุปผลและรายงาน</span> <strong id="avg-4">0.00</strong></div>
+                            <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden"><div id="bar-4" class="bg-teal-600 h-full rounded-full" style="width: 0%"></div></div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1"><span>5. ด้านการช่วยลดภาระงาน/เพิ่มประสิทธิภาพ</span> <strong id="avg-5">0.00</strong></div>
+                            <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden"><div id="bar-5" class="bg-emerald-600 h-full rounded-full" style="width: 0%"></div></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -336,7 +224,7 @@
     <div id="print-modal" class="fixed inset-0 z-50 bg-slate-900/60 hidden flex items-center justify-center p-3">
         <div class="bg-white w-full max-w-4xl rounded-3xl overflow-hidden flex flex-col max-h-[90vh]">
             <div class="bg-slate-900 text-white p-4 flex justify-between items-center no-print">
-                <h3 class="font-bold text-sm" id="print-modal-title">รายงานผลการประเมิน</h3>
+                <h3 class="font-bold text-sm">พิมพ์รายงานสรุปผลแบบละเอียด</h3>
                 <div class="flex gap-2">
                     <button type="button" onclick="window.print()" class="bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer"><i class="fa-solid fa-print"></i> สั่งพิมพ์ / เซฟ PDF</button>
                     <button type="button" onclick="closePrintModal()" class="bg-slate-700 text-white px-3 py-1.5 rounded-xl text-xs cursor-pointer">ปิด</button>
@@ -346,149 +234,60 @@
         </div>
     </div>
 
-    <!-- Application Script -->
+    <!-- Footer -->
+    <footer class="text-center py-6 text-xs text-slate-400 no-print">
+        ระบบประเมินความพึงพอใจออนไลน์ • รองรับการใช้งานผ่านมือถือและคอมพิวเตอร์
+    </footer>
+
+    <!-- Script Application -->
     <script>
-        // แทนที่ข้อความด้านล่างนี้ด้วย Web App URL ล่าสุดจาก Google Apps Script ของคุณ
-        const gasUrl = "ใส่_Web_App_URL_ของคุณตรงนี้";
+        // แทนที่ข้อความด้านล่างนี้ด้วย Web App URL ที่ได้จากการ Deploy Google Apps Script
+        const gasUrl = "https://script.google.com/macros/s/AKfycbx7DFAeH4mYzL-Ee-KmhBph1xHJwRu1l8CF_6XFECxC9xt01aj2t0r8nE6SNAm8VETgYQ/exec";
         
-        let records = [];
-        let pieChartInstance = null;
+        let globalDataStats = null;
+        let globalDataRecords = [];
 
         document.addEventListener('DOMContentLoaded', () => {
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('assessment-date').value = today;
-
-            initPieChart();
-            fetchCentralRecords(false);
+            loadSummaryData();
         });
 
-        function showToast(msg, type='success') {
-            const toast = document.getElementById('toast');
-            document.getElementById('toast-message').textContent = msg;
-            toast.classList.remove('translate-y-20', 'opacity-0');
-            setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 2500);
-        }
-
-        function switchTab(tabId) {
-            ['dashboard', 'assessment', 'records'].forEach(t => {
-                document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tabId);
-            });
-            if(tabId === 'records') fetchCentralRecords(false);
-            if(tabId === 'dashboard') updateDashboard();
+        function switchTab(tab) {
+            document.getElementById('tab-form').classList.toggle('hidden', tab !== 'form');
+            document.getElementById('tab-summary').classList.toggle('hidden', tab !== 'summary');
+            document.getElementById('btn-tab-form').className = tab === 'form' ? 'flex-1 py-2.5 rounded-xl font-bold text-sm bg-white text-teal-900 shadow transition cursor-pointer' : 'flex-1 py-2.5 rounded-xl font-bold text-sm text-slate-600 transition cursor-pointer';
+            document.getElementById('btn-tab-summary').className = tab === 'summary' ? 'flex-1 py-2.5 rounded-xl font-bold text-sm bg-white text-teal-900 shadow transition cursor-pointer' : 'flex-1 py-2.5 rounded-xl font-bold text-sm text-slate-600 transition cursor-pointer';
+            
+            if(tab === 'summary') loadSummaryData();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function fetchCentralRecords(notify = false) {
-            if(!gasUrl || gasUrl.includes("https://script.google.com/macros/s/AKfycby5MxcfXCkuZ2TRCLxluJU8rRgXFd72zOYkcupnhidtjlgK2SCP6ffMwYZCosXdJ4H6Cg/exec")) {
-                if(notify) showToast("กรุณาใส่ Web App URL ในโค้ดก่อน", "error");
+        function submitEvaluation(e) {
+            e.preventDefault();
+            if(!gasUrl || gasUrl.includes("ใส่_Web_App_URL")) {
+                alert("กรุณาใส่ Web App URL ในโค้ดก่อนครับ");
                 return;
             }
-            if(notify) showToast("กำลังดึงข้อมูลจาก Google Sheets...", "success");
 
-            fetch(gasUrl)
-                .then(res => res.json())
-                .then(data => {
-                    if(Array.isArray(data)) {
-                        records = data;
-                        localStorage.setItem('ltc_records_cache', JSON.stringify(records));
-                        updateDashboard();
-                        renderRecordsTable();
-                        if(notify) showToast("เชื่อมต่อข้อมูลล่าสุดเรียบร้อยแล้ว", "success");
-                    }
-                })
-                .catch(err => {
-                    try { records = JSON.parse(localStorage.getItem('ltc_records_cache') || '[]'); } catch(e){}
-                    updateDashboard();
-                    renderRecordsTable();
-                    if(notify) showToast("โหลดข้อมูลจากแคชสำเร็จ", "success");
-                });
-        }
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังส่งข้อมูล...';
 
-        function calculateADL() {
-            let total = 0;
-            for(let i=1; i<=10; i++) {
-                const radios = document.getElementsByName(`adl_${i}`);
-                let val = 0;
-                for(let r of radios) {
-                    if(r.checked) { val = parseInt(r.value); break; }
-                }
-                const scoreValEl = document.getElementById(`score-val-${i}`);
-                if(scoreValEl) scoreValEl.textContent = `${val} คะแนน`;
-                total += val;
-            }
-
-            const liveTotalEl = document.getElementById('live-total-score');
-            const previewTotalEl = document.getElementById('preview-total-score');
-            if(liveTotalEl) liveTotalEl.textContent = total;
-            if(previewTotalEl) previewTotalEl.textContent = total;
-
-            const titleEl = document.getElementById('preview-group-title');
-            const descEl = document.getElementById('preview-group-desc');
-
-            if(titleEl && descEl) {
-                if(total >= 12) {
-                    titleEl.textContent = "กลุ่มติดสังคม (Social-bound)";
-                    titleEl.className = "text-lg font-extrabold text-emerald-400";
-                    descEl.textContent = "พึ่งตนเองได้ดี ออกกำลังกายสม่ำเสมอ รักษาสุขภาพ และเข้าร่วมกิจกรรมผู้สูงอายุในชุมชน";
-                } else if(total >= 5) {
-                    titleEl.textContent = "กลุ่มติดบ้าน (Home-bound)";
-                    titleEl.className = "text-lg font-extrabold text-amber-400";
-                    descEl.textContent = "ช่วยเหลือตนเองได้บ้าง ป้องกันการพลัดตกหกล้ม ปรับสภาพแวดล้อมบ้านให้ปลอดภัย";
-                } else {
-                    titleEl.textContent = "กลุ่มติดเตียง (Bed-bound)";
-                    titleEl.className = "text-lg font-extrabold text-rose-400";
-                    descEl.textContent = "ภาวะพึ่งพิงรุนแรง ป้องกันแผลกดทับ (พลิกตัวทุก 2 ชม.), ระวังสำลัก, และเยี่ยมบ้านโดยทีม CM/CG";
-                }
-            }
-        }
-
-        function getLTCGroup(score) {
-            if(score >= 12) return { name: 'กลุ่มติดสังคม', badge: 'bg-emerald-100 text-emerald-900 border-emerald-300' };
-            if(score >= 5) return { name: 'กลุ่มติดบ้าน', badge: 'bg-amber-100 text-amber-900 border-amber-300' };
-            return { name: 'กลุ่มติดเตียง', badge: 'bg-rose-100 text-rose-900 border-rose-300' };
-        }
-
-        function saveAssessment(e) {
-            e.preventDefault();
-
-            let adlScores = [];
-            let total = 0;
-            for(let i=1; i<=10; i++) {
-                const radios = document.getElementsByName(`adl_${i}`);
-                let val = 0;
-                for(let r of radios) {
-                    if(r.checked) { val = parseInt(r.value); break; }
-                }
-                adlScores.push(val);
-                total += val;
-            }
-
-            const isEdit = !!document.getElementById('edit-id').value;
-
-            const recordData = {
-                action: 'save',
-                id: document.getElementById('edit-id').value || 'LTC-' + Date.now(),
-                staffName: document.getElementById('staff-name').value,
-                staffArea: document.getElementById('staff-area').value,
-                assessmentDate: document.getElementById('assessment-date').value,
-                patientName: document.getElementById('patient-name').value,
-                patientCid: document.getElementById('patient-cid').value,
-                patientPhone: document.getElementById('patient-phone').value,
-                adlScores: JSON.stringify(adlScores),
-                totalScore: total,
-                ltcGroup: getLTCGroup(total).name,
-                updatedAt: new Date().toISOString()
+            const formData = {
+                evaluatorName: document.getElementById('evaluatorName').value || 'ไม่ประสงค์ออกนาม',
+                evaluatorRole: document.getElementById('evaluatorRole').value,
+                q1: document.querySelector('input[name="q1"]:checked')?.value || 0,
+                q2: document.querySelector('input[name="q2"]:checked')?.value || 0,
+                q3: document.querySelector('input[name="q3"]:checked')?.value || 0,
+                q4: document.querySelector('input[name="q4"]:checked')?.value || 0,
+                q5: document.querySelector('input[name="q5"]:checked')?.value || 0,
+                suggestion: document.getElementById('suggestion').value || '-'
             };
 
-            const submitBtn = document.getElementById('submit-btn');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึกอย่างรวดเร็ว...';
-
-            let iframe = document.getElementById('hidden_submit_iframe');
+            let iframe = document.getElementById('hidden_iframe');
             if(!iframe) {
                 iframe = document.createElement('iframe');
-                iframe.id = 'hidden_submit_iframe';
-                iframe.name = 'hidden_submit_iframe';
+                iframe.id = 'hidden_iframe';
+                iframe.name = 'hidden_iframe';
                 iframe.style.display = 'none';
                 document.body.appendChild(iframe);
             }
@@ -496,13 +295,13 @@
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = gasUrl;
-            form.target = 'hidden_submit_iframe';
+            form.target = 'hidden_iframe';
 
-            for (let key in recordData) {
+            for(let key in formData) {
                 const input = document.createElement('input');
                 input.type = 'hidden';
                 input.name = key;
-                input.value = recordData[key];
+                input.value = formData[key];
                 form.appendChild(input);
             }
 
@@ -511,357 +310,118 @@
             document.body.removeChild(form);
 
             setTimeout(() => {
-                showToast(isEdit ? "อัปเดตข้อมูลสำเร็จ!" : "บันทึกข้อมูลสำเร็จ!", "success");
-                submitBtn.disabled = false;
-                resetForm();
-                switchTab('records');
-                fetchCentralRecords(false);
-            }, 800);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> ส่งแบบประเมินความพึงพอใจ';
+                document.getElementById('eval-form').reset();
+                
+                const toast = document.getElementById('toast');
+                toast.classList.remove('hidden');
+                setTimeout(() => toast.classList.add('hidden'), 4000);
+                
+                loadSummaryData();
+                switchTab('summary');
+            }, 1000);
         }
 
-        function editRecord(id) {
-            const r = records.find(item => String(item.id).trim() === String(id).trim());
-            if(!r) {
-                showToast("ไม่พบข้อมูลสำหรับแก้ไข", "error");
+        function loadSummaryData() {
+            if(!gasUrl || gasUrl.includes("ใส่_Web_App_URL")) return;
+
+            fetch(gasUrl)
+                .then(res => res.json())
+                .then(data => {
+                    if(data && data.stats) {
+                        globalDataStats = data.stats;
+                        globalDataRecords = data.records || [];
+                        const s = data.stats;
+                        document.getElementById('stat-total').textContent = s.total;
+                        const overall = s.total > 0 ? ((Number(s.avg1) + Number(s.avg2) + Number(s.avg3) + Number(s.avg4) + Number(s.avg5)) / 5).toFixed(2) : "0.00";
+                        document.getElementById('stat-overall').textContent = overall;
+                        document.getElementById('stat-q5').textContent = s.avg5;
+
+                        [1, 2, 3, 4, 5].forEach(i => {
+                            let val = s['avg' + i];
+                            document.getElementById('avg-' + i).textContent = val;
+                            document.getElementById('bar-' + i).style.width = (val / 5 * 100) + '%';
+                        });
+                    }
+                })
+                .catch(err => console.log(err));
+        }
+
+        function printDetailedReport() {
+            if (!globalDataStats) {
+                alert("ยังไม่มีข้อมูลสรุป หรือกำลังโหลดข้อมูล กรุณาลองใหม่อีกครั้ง");
+                loadSummaryData();
                 return;
             }
 
-            document.getElementById('edit-id').value = r.id;
-            document.getElementById('staff-name').value = r.staffName || '';
-            document.getElementById('staff-area').value = r.staffArea || '';
-            document.getElementById('assessment-date').value = r.assessmentDate || '';
-            document.getElementById('patient-name').value = r.patientName || '';
-            document.getElementById('patient-cid').value = r.patientCid || '';
-            document.getElementById('patient-phone').value = r.patientPhone || '';
+            const s = globalDataStats;
+            const overall = s.total > 0 ? ((Number(s.avg1) + Number(s.avg2) + Number(s.avg3) + Number(s.avg4) + Number(s.avg5)) / 5).toFixed(2) : "0.00";
 
-            let scores = [];
-            try {
-                scores = typeof r.adlScores === 'string' ? JSON.parse(r.adlScores) : r.adlScores;
-            } catch(e) { scores = []; }
-
-            if(Array.isArray(scores)) {
-                for(let i=1; i<=10; i++) {
-                    const radios = document.getElementsByName(`adl_${i}`);
-                    for(let radio of radios) {
-                        if(parseInt(radio.value) === parseInt(scores[i-1])) {
-                            radio.checked = true;
-                        }
-                    }
-                }
-            }
-
-            calculateADL();
-
-            document.getElementById('form-mode-badge').textContent = 'โหมดแก้ไขข้อมูล';
-            document.getElementById('form-mode-badge').className = 'bg-amber-100 text-amber-900 text-xs px-3 py-1 rounded-full font-extrabold';
-            document.getElementById('submit-btn-text').textContent = 'อัปเดตการแก้ไขข้อมูล';
-            document.getElementById('submit-btn').className = 'bg-amber-600 hover:bg-amber-700 text-white px-7 py-3 rounded-xl text-base font-extrabold shadow-lg transition flex items-center gap-2 cursor-pointer';
-
-            switchTab('assessment');
-            showToast("ดึงข้อมูลมาเรียบร้อยแล้ว", "success");
-        }
-
-        function deleteRecord(id, patientName) {
-            if(!confirm(`คุณต้องการลบข้อมูลการประเมินของ "${patientName}" ออกจาก Google Sheets ใช่หรือไม่?`)) return;
-
-            showToast("กำลังลบข้อมูล...", "success");
-
-            let iframe = document.getElementById('hidden_submit_iframe');
-            if(!iframe) {
-                iframe = document.createElement('iframe');
-                iframe.id = 'hidden_submit_iframe';
-                iframe.name = 'hidden_submit_iframe';
-                iframe.style.display = 'none';
-                document.body.appendChild(iframe);
-            }
-
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = gasUrl;
-            form.target = 'hidden_submit_iframe';
-
-            const inputAction = document.createElement('input');
-            inputAction.type = 'hidden';
-            inputAction.name = 'action';
-            inputAction.value = 'delete';
-            form.appendChild(inputAction);
-
-            const inputId = document.createElement('input');
-            inputId.type = 'hidden';
-            inputId.name = 'id';
-            inputId.value = id;
-            form.appendChild(inputId);
-
-            document.body.appendChild(form);
-            form.submit();
-            document.body.removeChild(form);
-
-            setTimeout(() => {
-                showToast("ลบข้อมูลสำเร็จ", "success");
-                fetchCentralRecords(false);
-            }, 800);
-        }
-
-        function resetForm() {
-            document.getElementById('adl-form').reset();
-            document.getElementById('edit-id').value = '';
-            document.getElementById('live-total-score').textContent = '0';
-            document.getElementById('preview-total-score').textContent = '0';
-            for(let i=1; i<=10; i++) {
-                const el = document.getElementById(`score-val-${i}`);
-                if(el) el.textContent = '0 คะแนน';
-            }
-            document.getElementById('assessment-date').value = new Date().toISOString().split('T')[0];
-
-            document.getElementById('form-mode-badge').textContent = 'แบบประเมินมาตรฐาน';
-            document.getElementById('form-mode-badge').className = 'bg-emerald-100 text-emerald-900 text-xs px-3 py-1 rounded-full font-extrabold';
-            document.getElementById('submit-btn-text').textContent = 'บันทึกข้อมูลขึ้น Google Sheets กลาง';
-            document.getElementById('submit-btn').className = 'bg-emerald-700 hover:bg-emerald-800 text-white px-7 py-3 rounded-xl text-base font-extrabold shadow-lg transition flex items-center gap-2 cursor-pointer';
-        }
-
-        function loadSampleData() {
-            resetForm();
-            document.getElementById('staff-name').value = "นส.กุศล อสม.";
-            document.getElementById('staff-area').value = "หมู่ 3 รพ.สต.บ้านหนองผักชี";
-            document.getElementById('patient-name').value = "นายบุญมี ศรีสุข";
-            document.getElementById('patient-cid').value = "1609900123459";
-            document.getElementById('patient-phone').value = "0891234567";
-
-            const sample = [5, 5, 5, 5, 10, 10, 5, 5, 5, 5];
-            for(let i=1; i<=10; i++) {
-                const radios = document.getElementsByName(`adl_${i}`);
-                for(let r of radios) { if(parseInt(r.value) === sample[i-1]) r.checked = true; }
-            }
-            calculateADL();
-            showToast("เติมข้อมูลตัวอย่างเรียบร้อย", "success");
-        }
-
-        function renderRecordsTable() {
-            const tbody = document.getElementById('records-tbody');
-            const recentTbody = document.getElementById('recent-records-tbody');
-            const searchVal = (document.getElementById('search-input')?.value || '').toLowerCase();
-            const filterGroup = document.getElementById('filter-group')?.value || '';
-
-            let filtered = records.filter(r => {
-                const matchSearch = (r.patientName && r.patientName.toLowerCase().includes(searchVal)) || (r.patientCid && String(r.patientCid).includes(searchVal));
-                const matchGroup = filterGroup ? r.ltcGroup === filterGroup : true;
-                return matchSearch && matchGroup;
-            });
-
-            document.getElementById('record-count-badge').textContent = records.length;
-
-            if(filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400">ไม่พบข้อมูลใน Google Sheets กลาง</td></tr>`;
-            } else {
-                // ปรับแต่งปุ่มให้รองรับการกดบนมือถือได้ง่ายขึ้น (มีข้อความและขนาดปุ่มเหมาะสม)
-                tbody.innerHTML = filtered.map(r => {
-                    const g = getLTCGroup(r.totalScore);
-                    const safeId = String(r.id || '').trim();
-                    const safeName = String(r.patientName || '').replace(/'/g, "\\'");
-                    return `
-                        <tr class="hover:bg-slate-50 border-b">
-                            <td class="py-3 px-2 font-bold whitespace-nowrap text-xs">${r.assessmentDate || '-'}</td>
-                            <td class="py-3 px-2"><div class="font-bold text-xs">${r.patientName}</div><div class="text-[10px] text-slate-400">CID: ${r.patientCid}</div></td>
-                            <td class="py-3 px-2 text-xs"><div>${r.staffName}</div></td>
-                            <td class="py-3 px-2 text-center font-extrabold text-teal-800 text-xs">${r.totalScore}/20</td>
-                            <td class="py-3 px-2 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${g.badge}">${r.ltcGroup}</span></td>
-                            <td class="py-3 px-2 text-center">
-                                <div class="flex justify-center gap-1">
-                                    <button type="button" onclick="editRecord('${safeId}')" title="แก้ไข" class="bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow cursor-pointer active:scale-95"><i class="fa-solid fa-pen-to-square"></i> แก้ไข</button>
-                                    <button type="button" onclick="printRecord('${safeId}')" title="พิมพ์" class="bg-teal-600 hover:bg-teal-700 text-white px-2.5 py-1.5 rounded-lg text-xs shadow cursor-pointer"><i class="fa-solid fa-print"></i></button>
-                                    <button type="button" onclick="deleteRecord('${safeId}', '${safeName}')" title="ลบ" class="bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1.5 rounded-lg text-xs shadow cursor-pointer"><i class="fa-solid fa-trash-can"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-            }
-
-            if(recentTbody) {
-                const recent = records.slice(0, 5);
-                recentTbody.innerHTML = recent.length === 0 ? `<tr><td colspan="4" class="text-center py-4 text-slate-400">ไม่มีประวัติ</td></tr>` : recent.map(r => `
-                    <tr>
-                        <td class="py-2">${r.assessmentDate}</td>
-                        <td class="py-2 font-bold">${r.patientName}</td>
-                        <td class="py-2 text-center font-bold text-teal-800">${r.totalScore}</td>
-                        <td class="py-2 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] border ${getLTCGroup(r.totalScore).badge}">${r.ltcGroup}</span></td>
-                    </tr>
-                `).join('');
-            }
-        }
-
-        function updateDashboard() {
-            document.getElementById('stat-total').textContent = records.length;
-            let g1=0, g2=0, g3=0;
-            records.forEach(r => {
-                let s = parseInt(r.totalScore) || 0;
-                if(s >= 12) g1++; else if(s >= 5) g2++; else g3++;
-            });
-            document.getElementById('stat-group1').textContent = g1;
-            document.getElementById('stat-group2').textContent = g2;
-            document.getElementById('stat-group3').textContent = g3;
-
-            if(pieChartInstance) {
-                pieChartInstance.data.datasets[0].data = [g1, g2, g3];
-                pieChartInstance.update();
-            }
-        }
-
-        function initPieChart() {
-            const ctx = document.getElementById('ltcPieChart').getContext('2d');
-            pieChartInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['ติดสังคม', 'ติดบ้าน', 'ติดเตียง'],
-                    datasets: [{ data: [0, 0, 0], backgroundColor: ['#22c55e', '#f59e0b', '#f43f5e'] }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
-            });
-        }
-
-        function printRecord(id) {
-            const r = records.find(item => String(item.id).trim() === String(id).trim());
-            if(!r) return;
-
-            let scores = [];
-            try {
-                scores = typeof r.adlScores === 'string' ? JSON.parse(r.adlScores) : r.adlScores;
-            } catch(e) { scores = []; }
-
-            const adlLabels = [
-                "1. การรับประทานอาหาร (Feeding)",
-                "2. การล้างหน้า หวีผม แปรงฟัน (Grooming)",
-                "3. การใช้ห้องน้ำ (Toilet use)",
-                "4. การอาบน้ำ (Bathing)",
-                "5. การเคลื่อนย้ายตัวจากเตียงไปเก้าอี้ (Transfer)",
-                "6. การเดินภายในห้องหรือบ้าน (Mobility)",
-                "7. การขึ้นลงบันได (Stairs)",
-                "8. การใส่เสื้อผ้า (Dressing)",
-                "9. การกลั้นการขับถ่ายอุจจาระ (Bowels)",
-                "10. การกลั้นการขับถ่ายปัสสาวะ (Bladder)"
-            ];
-
-            let scoreRowsHtml = "";
-            let total = parseInt(r.totalScore) || 0;
-            for(let i=0; i<10; i++) {
-                let sc = scores[i] !== undefined ? scores[i] : '-';
-                scoreRowsHtml += `
-                    <tr>
-                        <td style="border: 1px solid #cbd5e1; padding: 6px 10px;">${adlLabels[i]}</td>
-                        <td style="border: 1px solid #cbd5e1; padding: 6px 10px; text-align: center; font-weight: bold;">${sc} คะแนน</td>
-                    </tr>
-                `;
-            }
-
-            document.getElementById('print-modal-title').textContent = "รายงานผลการประเมินรายบุคคล (Barthel ADL Index)";
-            document.getElementById('printableArea').innerHTML = `
-                <div style="font-family: Sarabun, sans-serif; color: #1e293b; line-height: 1.5;">
-                    <div style="text-align: center; margin-bottom: 20px;">
-                        <h2 style="font-size: 20px; font-weight: bold; color: #0f766e; margin: 0;">แบบรายงานผลการประเมินภาวะพึ่งพิง (Barthel ADL Index)</h2>
-                        <p style="font-size: 13px; color: #64748b; margin: 4px 0 0 0;">ระบบฐานข้อมูลกลาง อสม. / LTC</p>
-                    </div>
-
-                    <table style="width: 100%; font-size: 13px; margin-bottom: 15px; border-collapse: collapse;">
-                        <tr>
-                            <td style="padding: 4px 0;"><strong>ชื่อ-นามสกุลผู้ป่วย:</strong> ${r.patientName}</td>
-                            <td style="padding: 4px 0;"><strong>เลขบัตรประชาชน:</strong> ${r.patientCid}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 4px 0;"><strong>เบอร์โทรศัพท์:</strong> ${r.patientPhone || '-'}</td>
-                            <td style="padding: 4px 0;"><strong>วันที่ประเมิน:</strong> ${r.assessmentDate}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 4px 0;" colspan="2"><strong>ผู้ประเมิน:</strong> ${r.staffName} (${r.staffArea})</td>
-                        </tr>
-                    </table>
-
-                    <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 15px;">
-                        <thead>
-                            <tr style="background: #f1f5f9; text-align: left;">
-                                <th style="border: 1px solid #cbd5e1; padding: 8px 10px;">กิจวัตรประจำวัน (10 ข้อ)</th>
-                                <th style="border: 1px solid #cbd5e1; padding: 8px 10px; text-align: center; width: 120px;">คะแนนที่ได้</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${scoreRowsHtml}
-                        </tbody>
-                    </table>
-
-                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <span style="font-size: 12px; color: #166534; font-weight: bold; display: block;">ผลการประเมินและจัดกลุ่ม LTC</span>
-                            <span style="font-size: 16px; font-weight: 800; color: #14532d;">${r.ltcGroup}</span>
-                        </div>
-                        <div style="text-align: right;">
-                            <span style="font-size: 12px; color: #166534; font-weight: bold; display: block;">คะแนนรวมทั้งสิ้น</span>
-                            <span style="font-size: 22px; font-weight: 800; color: #047857;">${total} / 20 คะแนน</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.getElementById('print-modal').classList.remove('hidden');
-        }
-
-        function printSummaryReport() {
-            let g1 = 0, g2 = 0, g3 = 0;
-            records.forEach(r => {
-                let s = parseInt(r.totalScore) || 0;
-                if(s >= 12) g1++; else if(s >= 5) g2++; else g3++;
-            });
-
-            let tableRows = records.map((r, index) => `
+            let tableRows = globalDataRecords.map((r, index) => `
                 <tr>
                     <td style="border: 1px solid #cbd5e1; padding: 6px; text-align: center;">${index + 1}</td>
-                    <td style="border: 1px solid #cbd5e1; padding: 6px;">${r.assessmentDate || '-'}</td>
-                    <td style="border: 1px solid #cbd5e1; padding: 6px; font-weight: bold;">${r.patientName}</td>
-                    <td style="border: 1px solid #cbd5e1; padding: 6px;">${r.patientCid || '-'}</td>
-                    <td style="border: 1px solid #cbd5e1; padding: 6px; text-align: center; font-weight: bold;">${r.totalScore}</td>
-                    <td style="border: 1px solid #cbd5e1; padding: 6px; text-align: center;">${r.ltcGroup}</td>
-                    <td style="border: 1px solid #cbd5e1; padding: 6px;">${r.staffName} (${r.staffArea})</td>
+                    <td style="border: 1px solid #cbd5e1; padding: 6px;">${r.timestamp || '-'}</td>
+                    <td style="border: 1px solid #cbd5e1; padding: 6px; font-weight: bold;">${r.name}</td>
+                    <td style="border: 1px solid #cbd5e1; padding: 6px;">${r.role}</td>
+                    <td style="border: 1px solid #cbd5e1; padding: 6px; text-align: center;">${r.q1}, ${r.q2}, ${r.q3}, ${r.q4}, ${r.q5}</td>
+                    <td style="border: 1px solid #cbd5e1; padding: 6px;">${r.suggestion}</td>
                 </tr>
             `).join('');
 
-            document.getElementById('print-modal-title').textContent = "รายงานสรุปภาพรวมการประเมินภาวะพึ่งพิง (LTC Summary Report)";
             document.getElementById('printableArea').innerHTML = `
                 <div style="font-family: Sarabun, sans-serif; color: #1e293b; line-height: 1.5;">
                     <div style="text-align: center; margin-bottom: 20px;">
-                        <h2 style="font-size: 20px; font-weight: bold; color: #0f766e; margin: 0;">รายงานสรุปภาพรวมการประเมินภาวะพึ่งพิงผู้สูงอายุ (LTC)</h2>
-                        <p style="font-size: 13px; color: #64748b; margin: 4px 0 0 0;">ข้อมูลจากระบบฐานข้อมูลกลาง Google Sheets</p>
+                        <h2 style="font-size: 18px; font-weight: bold; color: #0f766e; margin: 0;">รายงานสรุปผลการประเมินความพึงพอใจการใช้งานระบบ</h2>
+                        <p style="font-size: 12px; color: #64748b; margin: 4px 0 0 0;">ระบบบันทึกและประเมินภาวะพึ่งพิง (Barthel ADL & LTC)</p>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; text-align: center;">
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; text-align: center;">
                         <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 10px; border-radius: 8px;">
-                            <div style="font-size: 11px; color: #64748b;">ผู้ป่วยทั้งหมด</div>
-                            <div style="font-size: 18px; font-weight: bold; color: #0f172a;">${records.length} คน</div>
+                            <div style="font-size: 11px; color: #64748b;">จำนวนผู้ประเมินทั้งหมด</div>
+                            <div style="font-size: 18px; font-weight: bold; color: #0f172a;">${s.total} คน</div>
                         </div>
                         <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px; border-radius: 8px;">
-                            <div style="font-size: 11px; color: #166534;">กลุ่มติดสังคม</div>
-                            <div style="font-size: 18px; font-weight: bold; color: #15803d;">${g1} คน</div>
+                            <div style="font-size: 11px; color: #166534;">คะแนนเฉลี่ยภาพรวม</div>
+                            <div style="font-size: 18px; font-weight: bold; color: #15803d;">${overall} / 5.00</div>
                         </div>
-                        <div style="background: #fffbeb; border: 1px solid #fde68a; padding: 10px; border-radius: 8px;">
-                            <div style="font-size: 11px; color: #b45309;">กลุ่มติดบ้าน</div>
-                            <div style="font-size: 18px; font-weight: bold; color: #d97706;">${g2} คน</div>
-                        </div>
-                        <div style="background: #fff1f2; border: 1px solid #fecdd3; padding: 10px; border-radius: 8px;">
-                            <div style="font-size: 11px; color: #9f1239;">กลุ่มติดเตียง</div>
-                            <div style="font-size: 18px; font-weight: bold; color: #e11d48;">${g3} คน</div>
+                        <div style="background: #ecfeff; border: 1px solid #a5f3fc; padding: 10px; border-radius: 8px;">
+                            <div style="font-size: 11px; color: #155e75;">ด้านการลดภาระงาน</div>
+                            <div style="font-size: 18px; font-weight: bold; color: #0891b2;">${s.avg5} / 5.00</div>
                         </div>
                     </div>
 
-                    <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                    <h3 style="font-size: 13px; font-weight: bold; margin-bottom: 8px; color: #334155;">1. คะแนนเฉลี่ยรายข้อ</h3>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 20px;">
                         <thead>
                             <tr style="background: #f1f5f9; text-align: left;">
-                                <th style="border: 1px solid #cbd5e1; padding: 6px; text-align: center; width: 40px;">ที่</th>
-                                <th style="border: 1px solid #cbd5e1; padding: 6px; width: 75px;">วันที่</th>
-                                <th style="border: 1px solid #cbd5e1; padding: 6px;">ชื่อ-นามสกุลผู้ป่วย</th>
-                                <th style="border: 1px solid #cbd5e1; padding: 6px; width: 90px;">เลขบัตรประชาชน</th>
-                                <th style="border: 1px solid #cbd5e1; padding: 6px; text-align: center; width: 50px;">ADL</th>
-                                <th style="border: 1px solid #cbd5e1; padding: 6px; text-align: center; width: 85px;">กลุ่ม LTC</th>
-                                <th style="border: 1px solid #cbd5e1; padding: 6px;">ผู้ประเมิน / พื้นที่</th>
+                                <th style="border: 1px solid #cbd5e1; padding: 6px;">หัวข้อการประเมิน</th>
+                                <th style="border: 1px solid #cbd5e1; padding: 6px; text-align: center; width: 100px;">คะแนนเฉลี่ย (X̄)</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${tableRows.length > 0 ? tableRows : `<tr><td colspan="7" style="text-align: center; padding: 20px; border: 1px solid #cbd5e1;">ไม่พบข้อมูล</td></tr>`}
+                            <tr><td style="border: 1px solid #cbd5e1; padding: 6px;">1. ด้านการออกแบบหน้าจอและความสะดวกในการใช้งานระบบ (Usability)</td><td style="border: 1px solid #cbd5e1; padding: 6px; text-align: center; font-weight: bold;">${s.avg1}</td></tr>
+                            <tr><td style="border: 1px solid #cbd5e1; padding: 6px;">2. ด้านความรวดเร็วในการบันทึก แก้ไข และเรียกดูข้อมูล</td><td style="border: 1px solid #cbd5e1; padding: 6px; text-align: center; font-weight: bold;">${s.avg2}</td></tr>
+                            <tr><td style="border: 1px solid #cbd5e1; padding: 6px;">3. ด้านความถูกต้องแม่นยำในการคำนวณ ADL และจัดกลุ่ม LTC</td><td style="border: 1px solid #cbd5e1; padding: 6px; text-align: center; font-weight: bold;">${s.avg3}</td></tr>
+                            <tr><td style="border: 1px solid #cbd5e1; padding: 6px;">4. ด้านระบบสรุปผล (Dashboard) และฟังก์ชันพิมพ์รายงาน</td><td style="border: 1px solid #cbd5e1; padding: 6px; text-align: center; font-weight: bold;">${s.avg4}</td></tr>
+                            <tr><td style="border: 1px solid #cbd5e1; padding: 6px;">5. ด้านประโยชน์ในการช่วยลดภาระงานและเพิ่มประสิทธิภาพจริง</td><td style="border: 1px solid #cbd5e1; padding: 6px; text-align: center; font-weight: bold;">${s.avg5}</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h3 style="font-size: 13px; font-weight: bold; margin-bottom: 8px; color: #334155;">2. รายละเอียดความคิดเห็นและข้อเสนอแนะของผู้ประเมิน</h3>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+                        <thead>
+                            <tr style="background: #f1f5f9; text-align: left;">
+                                <th style="border: 1px solid #cbd5e1; padding: 6px; text-align: center; width: 35px;">ที่</th>
+                                <th style="border: 1px solid #cbd5e1; padding: 6px; width: 95px;">วัน-เวลา</th>
+                                <th style="border: 1px solid #cbd5e1; padding: 6px; width: 110px;">ผู้ประเมิน</th>
+                                <th style="border: 1px solid #cbd5e1; padding: 6px; width: 100px;">ตำแหน่ง</th>
+                                <th style="border: 1px solid #cbd5e1; padding: 6px; text-align: center; width: 75px;">คะแนน (Q1-Q5)</th>
+                                <th style="border: 1px solid #cbd5e1; padding: 6px;">ข้อเสนอแนะ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tableRows.length > 0 ? tableRows : `<tr><td colspan="6" style="text-align: center; padding: 15px; border: 1px solid #cbd5e1;">ยังไม่มีข้อมูลการประเมิน</td></tr>`}
                         </tbody>
                     </table>
                 </div>
